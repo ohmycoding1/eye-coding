@@ -159,46 +159,62 @@ const OB=['🤖','🐱','🐶','🚀'];OB.forEach((o,i)=>{const b=h('button',i?'
 const G={on:false,x:innerWidth/2,y:innerHeight/2,dwell:false};let hov=null,dwT=0,cool=0;
 const cur=$('cur');
 function gz(x,y,k){G.x+=(x-G.x)*k;G.y+=(y-G.y)*k;cur.style.transform=`translate(${G.x}px,${G.y}px)`;
- const el=document.elementFromPoint(G.x,G.y),t=el&&el.closest('button,input,.slot,.zone,#stage');
+ const el=document.elementFromPoint(G.x,G.y);let t=el&&el.closest('button,input,.slot,.zone,#stage');
+ if(t!==hov&&hov&&hov.isConnected&&hov.id!='stage'){const r=hov.getBoundingClientRect();if(G.x>r.left-40&&G.x<r.right+40&&G.y>r.top-40&&G.y<r.bottom+40)t=hov}/* 경계에서 흔들려도 응시 유지 */
  if(t!==hov){hov&&hov.classList.remove('gz');hov=t;t&&t.classList.add('gz');dwT=performance.now()}
- let p=0;if(G.dwell&&t&&t.id!='stage'&&performance.now()>cool){p=(performance.now()-dwT)/1500;if(p>=1){fire(G.x,G.y);cool=performance.now()+1000;p=0}}cur.style.setProperty('--p',p*360+'deg')}
+ let p=0;if(G.dwell&&t&&t.id!='stage'&&performance.now()>cool){p=Math.max(0,(performance.now()-dwT)/1500);if(p>=1){dwT=Infinity;/* 다른 곳을 봤다가 돌아와야 다시 선택 */const r=t.getBoundingClientRect();fire(r.left+r.width/2,r.top+r.height/2);cool=performance.now()+1000;p=0}}cur.style.setProperty('--p',p*360+'deg')}
 document.addEventListener('mousemove',e=>{if(!G.on)gz(e.clientX,e.clientY,1)});
+setInterval(()=>{if(!G.on&&G.dwell)gz(G.x,G.y,0)},50);/* 마우스가 멈춰 있어도 응시 시간이 흐르게 */
 function fire(x,y){const el=document.elementFromPoint(x,y);if(!el)return;const o={bubbles:true,clientX:x,clientY:y};
  if(el.tagName=='INPUT'){el.focus();return}
  ['mousedown','mouseup','click'].forEach(n=>el.dispatchEvent(new MouseEvent(n,o)));
  cur.animate([{boxShadow:'0 0 0 0 #ef4444'},{boxShadow:'0 0 0 30px transparent'}],300)}
 document.addEventListener('keydown',e=>{if(e.code=='Space'&&e.target.tagName!='INPUT'){e.preventDefault();fire(G.x,G.y)}});
-let base=0,cs=0,ring=[];
-function blinkTick(){if(!G.on||!window.webgazer)return;let ear=null;
- try{const p=webgazer.getTracker().getPositions();if(p&&p.length>380){const d=(a,b)=>Math.hypot(p[a][0]-p[b][0],p[a][1]-p[b][1]);
-  ear=((d(160,144)+d(158,153))/(2*d(33,133))+(d(385,380)+d(387,373))/(2*d(362,263)))/2}}catch(e){}
- const now=performance.now();ring.push([G.x,G.y]);if(ring.length>10)ring.shift();
- let closed=ear!==null?ear<base*.62:cs>0;
- if(ear!==null&&!closed)base=base?base*.97+ear*.03:ear;
- if(closed&&!cs){cs=now}
- if(cs)$('mt').firstChild.style.width=Math.min(100,(now-cs)/4)+'%';
- if(closed&&cs&&now-cs>400)$('mt').firstChild.style.background='#22c55e';
- if(!closed&&cs){const t=now-cs;cs=0;$('mt').firstChild.style.width=0;$('mt').firstChild.style.background='';if(t>=400&&t<2000)fire(ring[0][0],ring[0][1])}}
+/* 눈 감김 판정: EAR(눈 세로/가로 비율)이 '뜬 눈 기준값 × ratio' 아래면 감은 것.
+   ratio는 보정 때 직접 측정한 감은 눈 값으로 정하고, 다시 뜬 것으로 볼 때는 조금 더 높은 값(rOpen)을 써서 경계에서 깜빡이지 않게 합니다. */
+let base=0,cs=0,ring=[],cpos=null;const EYE={ratio:.62,get rOpen(){return this.ratio+(1-this.ratio)*.4}};
+function earNow(){try{const p=webgazer.getTracker().getPositions();if(p&&p.length>380){const d=(a,b)=>Math.hypot(p[a][0]-p[b][0],p[a][1]-p[b][1]);
+  return((d(160,144)+d(158,153))/(2*d(33,133))+(d(385,380)+d(387,373))/(2*d(362,263)))/2}}catch(e){}return null}
+function blinkTick(){if(!G.on||!window.webgazer||G.cal)return;const ear=earNow(),now=performance.now(),m=$('mt').firstChild;
+ const closed=ear===null?cs>0:ear<base*(cs?EYE.rOpen:EYE.ratio);
+ if(ear!==null&&ear>=base*EYE.rOpen)base=base?base*.97+ear*.03:ear;/* 확실히 뜬 눈일 때만 기준값을 따라감 */
+ if(!closed&&!cs){ring.push([G.x,G.y]);if(ring.length>10)ring.shift()}
+ if(closed&&!cs){cs=now;cpos=ring[0]||[G.x,G.y]}/* 감기 시작 직전(약 0.4초 전) 시선 위치 */
+ if(cs)m.style.width=Math.min(100,(now-cs)/4)+'%';
+ if(closed&&cs&&now-cs>400)m.style.background='#22c55e';
+ if(!closed&&cs){const t=now-cs;cs=0;m.style.width=0;m.style.background='';ring=[];if(t>=400&&t<2000)fire(cpos[0],cpos[1])}}
 setInterval(blinkTick,40);
+const WG='https://cdn.jsdelivr.net/npm/webgazer@3.5.3/dist';
 function loadJs(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.append(s)})}
-$('eyeB').onclick=async()=>{if(!window.isSecureContext||!navigator.mediaDevices){st('카메라는 https 주소나 localhost에서만 켤 수 있어요. 지금은 마우스 모드로 동작합니다.');toast('카메라를 쓸 수 없는 주소예요 (https 필요)');return}st('시선 추적을 불러오는 중… 카메라 권한을 허용해 주세요');
- try{if(!window.webgazer)await loadJs('https://cdn.jsdelivr.net/npm/webgazer/dist/webgazer.min.js');
-  await webgazer.setRegression('ridge').setGazeListener(d=>{if(d)gz(d.x,d.y,.3)}).begin();webgazer.showPredictionPoints(false);
+$('eyeB').onclick=async()=>{const L=location;if(L.protocol=='file:'||!window.isSecureContext||!navigator.mediaDevices||(L.protocol!='https:'&&!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(L.hostname))){
+  /* WebGazer는 https·localhost가 아니면 영어 경고창만 띄우고 멈추므로 미리 안내 */
+  st(L.protocol=='file:'?'파일을 바로 연 상태(file://)에서는 카메라를 쓸 수 없어요. https 주소(예: GitHub Pages)나 로컬 서버(localhost)로 열어 주세요. 지금은 마우스 모드로 동작합니다.':'카메라는 https 주소나 localhost에서만 켤 수 있어요. 지금은 마우스 모드로 동작합니다.');toast('시선 추적은 https 주소에서만 켤 수 있어요');return}st('시선 추적을 불러오는 중… 카메라 권한을 허용해 주세요');
+ try{if(!window.webgazer)await loadJs(WG+'/webgazer.min.js');
+  webgazer.params.faceMeshSolutionPath=WG+'/mediapipe/face_mesh';/* 기본값은 페이지 기준 상대 경로라 얼굴 모델을 못 찾음 */
+  await webgazer.setRegression('ridge').setGazeListener(d=>{if(d&&!cs)gz(d.x,d.y,.3)}).begin();webgazer.showPredictionPoints(false);
   G.on=true;$('eyeB').classList.add('on');$('eyeB').textContent='👁 시선 추적 켜짐';calib()}
- catch(e){st('카메라 또는 시선 라이브러리를 사용할 수 없어 마우스 모드로 동작합니다. (브라우저에서 직접 열면 카메라가 동작합니다)')}};
+ catch(e){console.error(e);const n=e&&e.name;st(n=='NotAllowedError'?'카메라 권한이 거부되어 마우스 모드로 동작합니다. 주소창의 카메라 권한을 허용해 주세요.':n=='NotFoundError'?'카메라를 찾지 못해 마우스 모드로 동작합니다.':'시선 추적을 불러오지 못해 마우스 모드로 동작합니다. 인터넷 연결을 확인해 주세요.')}};
 $('calB').onclick=()=>G.on?calib():toast('먼저 시선 추적을 시작하세요');
-async function calib(){const c=$('cal');c.style.display='block';c.textContent='화면의 노란 점을 차례로 바라보세요';c.querySelectorAll('i').forEach(i=>i.remove());
+const med=a=>{a=a.filter(v=>v!==null).sort((x,y)=>x-y);return a.length?a[a.length>>1]:null};
+async function sample(ms){const a=[];for(const e=performance.now()+ms;performance.now()<e;){a.push(earNow());await sl(40)}return med(a)}
+function beep(){try{const A=beep.a||(beep.a=new AudioContext()),o=A.createOscillator(),g=A.createGain();o.frequency.value=880;g.gain.value=.2;o.connect(g).connect(A.destination);o.start();o.stop(A.currentTime+.25)}catch(e){}}
+async function calib(){const c=$('cal');c.style.display='block';G.cal=true;c.textContent='화면의 노란 점을 차례로 바라보세요';c.querySelectorAll('i').forEach(i=>i.remove());
  const pts=[[.08,.1],[.5,.1],[.92,.1],[.08,.5],[.5,.5],[.92,.5],[.08,.9],[.5,.9],[.92,.9]];
  for(const [px,py] of pts){const d=h('i');d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);const x=px*innerWidth,y=py*innerHeight;
   for(let i=0;i<22;i++){try{webgazer.recordScreenPosition(x,y,'click')}catch(e){}await sl(90)}d.remove()}
- c.style.display='none';st('보정 완료! 보정이 어긋나면 🎯 보정을 다시 눌러 주세요.')}
+ c.textContent='눈을 편하게 뜨고 화면을 보세요';await sl(600);const o=await sample(1500);
+ c.textContent='눈을 감고, 삐 소리가 나면 뜨세요';await sl(900);const k=await sample(1500);beep();await sl(500);
+ let msg='보정 완료! 보정이 어긋나면 🎯 보정을 다시 눌러 주세요.';
+ if(o&&k!==null&&k<o*.92){EYE.ratio=Math.min(.88,Math.max(.5,(k+(o-k)*.45)/o));base=o}
+ else msg='시선 보정은 끝났지만 눈 감김을 잘 측정하지 못했어요. 밝은 곳에서 🎯 보정을 다시 해 보세요.';
+ c.style.display='none';cs=0;ring=[];G.cal=false;st(msg)}
 $('dwB').onclick=()=>{G.dwell=!G.dwell;$('dwB').classList.toggle('on',G.dwell);$('dwB').textContent=G.dwell?'⏱ 응시 선택 켜짐':'⏱ 응시 선택 꺼짐'};
 /* ---------- 음성 ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec,mic=false;
 $('micB').onclick=()=>{if(!SR){toast('이 브라우저는 음성 인식을 지원하지 않아요 (Chrome 권장)');return}
  if(mic){mic=false;rec.stop();$('micB').classList.remove('on');$('micB').textContent='🎤 음성 켜기';return}
  rec=new SR();rec.lang='ko-KR';rec.continuous=true;rec.interimResults=true;rec.onspeechstart=()=>$('heard').textContent='🎤 말소리를 감지했어요…';rec.onresult=e=>{let it='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)heard(r[0].transcript.trim());else it+=r[0].transcript}if(it)$('heard').textContent='🎤 듣는 중: '+it};
- rec.onend=()=>{if(mic)try{rec.start()}catch(e){}};rec.onerror=e=>{if(e.error=='not-allowed'){mic=false;toast('마이크 권한이 필요해요')}};
+ rec.onend=()=>{if(mic)try{rec.start()}catch(e){}};rec.onerror=e=>{if(e.error=='not-allowed'||e.error=='service-not-allowed'){mic=false;$('micB').classList.remove('on');$('micB').textContent='🎤 음성 켜기';toast('마이크 권한이 필요해요')}};
  rec.start();mic=true;$('micB').classList.add('on');$('micB').textContent='🎤 듣는 중'};
 const KD={영:0,공:0,일:1,이:2,삼:3,사:4,오:5,육:6,칠:7,팔:8,구:9};
 function pn(s){s=s.replace(/마이너스/g,'-').replace(/\s/g,'');const m=s.match(/-?\d+(\.\d+)?/);if(m)return m[0];let t=0,c=0,f=0;for(const ch of s){if(ch in KD){c=KD[ch];f=1}else if(ch=='십'){t+=(f?c:1)*10;c=0;f=0}else if(ch=='백'){t+=(f?c:1)*100;c=0;f=0}}t+=c;return(f||t)?String((s[0]=='-'?-1:1)*t):null}
@@ -209,11 +225,14 @@ function focusInput(){const a=target||(ws.length?ws[ws.length-1].body:[]);let i=
 function heard(t){$('heard').textContent='🎤 "'+t+'"';
  if(armed&&armed.isConnected){const ty=armed.dataset.t;let v=t;if(ty!='t'){v=pn(t);if(v===null){toast('숫자를 알아듣지 못했어요');return}}else v=t.replace(/[.。]$/,'');
   armed.value=v;armed.dispatchEvent(new Event('input'));armed.blur();armed=null;toast('입력: '+v);return}
- const sp=norm(t),spw=norm(t.replace(/-?\d+(\.\d+)?/g,''));
- const C={실행:runAll,실행해:runAll,정지:stopAll,멈춰:stopAll,밖으로:()=>$('outB').click(),나가기:()=>$('outB').click(),모두지우기:()=>$('clrB').click(),입력:focusInput};
- if(C[sp]){C[sp]();return}
- let best=null,sc=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){let s=0;if(spw.length>=2&&spw.includes(k)&&k.length>=2)s=k.length+1;else if(spw.length>=3&&k.includes(spw))s=spw.length*.8;if(s>sc){sc=s;best=id}}}
- let fz=false;if(!best&&spw.length>=2){let fs=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){const s=sim(spw,k);if(s>fs){fs=s;best=id}}}if(fs<.6)best=null;else fz=true}
+ /* 음성 인식은 x·y를 '엑스·와이'로, 음수를 '마이너스 10'으로 적는 경우가 많음 */
+ t=t.replace(/엑스/g,'x').replace(/와이/g,'y').replace(/마이너스\s*(?=\d)/g,'-');
+ const sp=norm(t),spw=norm(t.replace(/-?\d+(\.\d+)?/g,'')),cmd=sp.replace(/(해|하기)?(요|줘|주세요|줄래)?$/,'');
+ const out=()=>$('outB').click(),clr=()=>$('clrB').click();
+ const C={실행:runAll,정지:stopAll,멈춰:stopAll,그만:stopAll,밖으로:out,나가기:out,밖으로나가기:out,모두지우기:clr,다지워:clr,다지우기:clr,전부지우기:clr,입력:focusInput};
+ const c=C[sp]||C[cmd];if(c){c();return}
+ let best=null,sc=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){let s=0;if(spw.length>=2&&spw.includes(k)&&k.length>=2)s=k.length+1;else if(spw.length>=3&&k.includes(spw)||spw.length>=2&&k.startsWith(spw))s=spw.length*.8;if(s>sc){sc=s;best=id}}}
+ let fz=false;if(!best&&spw.length>=3){let fs=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){const s=sim(spw,k);if(s>fs){fs=s;best=id}}}if(fs<(spw.length<5?.8:.6))best=null;else fz=true}/* 짧은 말은 더 엄격하게 */
  if(best){const n=t.match(/-?\d+(\.\d+)?/g);add(best,n);toast((fz?'비슷한 블록으로 추가: ':'추가: ')+D[best].parts.map(p=>p[0]=='{'?'□':p).join(''))}else toast('비슷한 블록을 찾지 못했어요. 다시 말해 주세요')}
 tabs();pal();draw();paint();
 </script></body></html>
