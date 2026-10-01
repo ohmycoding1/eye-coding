@@ -50,6 +50,8 @@ input.arm{outline:6px solid var(--hl);animation:bl 1s infinite}@keyframes bl{50%
 #cur{position:fixed;left:-20px;top:-20px;width:40px;height:40px;border-radius:50%;border:4px solid var(--hl);background:conic-gradient(rgba(239,68,68,.55) var(--p,0deg),transparent 0);pointer-events:none;z-index:99;transition:transform .05s linear}
 #cal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:98;display:none;color:#fff;font-size:26px;text-align:center;padding-top:30vh}
 #cal i{position:fixed;width:34px;height:34px;margin:-17px;border-radius:50%;background:#facc15;box-shadow:0 0 0 8px rgba(250,204,21,.4)}
+#cal i.rec{background:#22c55e;box-shadow:0 0 0 8px rgba(34,197,94,.4)}#cal i.chk{background:#60a5fa;box-shadow:0 0 0 8px rgba(96,165,250,.4)}
+body.pv #webgazerVideoContainer{left:50%!important;top:50%!important;transform:translate(-50%,-10%) scale(1.4);z-index:100!important}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#111;color:#fff;padding:12px 20px;border-radius:30px;z-index:97;display:none;font-size:18px}
 @media(max-width:900px){main{grid-template-columns:1fr;overflow:auto}body{overflow:auto}#wrap{grid-template-columns:1fr;min-height:70vh}}
 </style></head><body>
@@ -158,7 +160,7 @@ const OB=['🤖','🐱','🐶','🚀'];OB.forEach((o,i)=>{const b=h('button',i?'
 /* ---------- 시선 / 깜박임 ---------- */
 const G={on:false,x:innerWidth/2,y:innerHeight/2,dwell:false};let hov=null,dwT=0,cool=0;
 const cur=$('cur');
-function gz(x,y,k){G.x+=(x-G.x)*k;G.y+=(y-G.y)*k;cur.style.transform=`translate(${G.x}px,${G.y}px)`;
+function gz(x,y,k){x=Math.max(0,Math.min(innerWidth-1,x));y=Math.max(0,Math.min(innerHeight-1,y));G.x+=(x-G.x)*k;G.y+=(y-G.y)*k;cur.style.transform=`translate(${G.x}px,${G.y}px)`;
  const el=document.elementFromPoint(G.x,G.y);let t=el&&el.closest('button,input,.slot,.zone,#stage');
  if(t!==hov&&hov&&hov.isConnected&&hov.id!='stage'){const r=hov.getBoundingClientRect();if(G.x>r.left-40&&G.x<r.right+40&&G.y>r.top-40&&G.y<r.bottom+40)t=hov}/* 경계에서 흔들려도 응시 유지 */
  if(t!==hov){hov&&hov.classList.remove('gz');hov=t;t&&t.classList.add('gz');dwT=performance.now()}
@@ -186,28 +188,60 @@ function blinkTick(){if(!G.on||!window.webgazer||G.cal)return;const ear=earNow()
 setInterval(blinkTick,40);
 const WG='https://cdn.jsdelivr.net/npm/webgazer@3.5.3/dist';
 function loadJs(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.append(s)})}
-$('eyeB').onclick=async()=>{const L=location;if(L.protocol=='file:'||!window.isSecureContext||!navigator.mediaDevices||(L.protocol!='https:'&&!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(L.hostname))){
+/* 카메라 화면 보이기/숨기기 (showVideoPreview(false)는 내부 설정까지 꺼서 다시 켤 수 없으므로 하나씩) */
+const cam=v=>{webgazer.showVideo(v).showFaceOverlay(v).showFaceFeedbackBox(v);document.body.classList.toggle('pv',v)};
+const eyeTxt=()=>{$('eyeB').classList.toggle('on',G.on);$('eyeB').textContent=G.on?'👁 시선 추적 끄기':'👁 시선 추적 시작'};
+let starting=false;
+$('eyeB').onclick=async()=>{if(starting||G.cal)return;if(G.on){webgazer.pause();G.on=false;cs=0;eyeTxt();st('시선 추적을 껐어요. 마우스로 사용할 수 있어요.');return}
+ const L=location;if(L.protocol=='file:'||!window.isSecureContext||!navigator.mediaDevices||(L.protocol!='https:'&&!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(L.hostname))){
   /* WebGazer는 https·localhost가 아니면 영어 경고창만 띄우고 멈추므로 미리 안내 */
-  st(L.protocol=='file:'?'파일을 바로 연 상태(file://)에서는 카메라를 쓸 수 없어요. https 주소(예: GitHub Pages)나 로컬 서버(localhost)로 열어 주세요. 지금은 마우스 모드로 동작합니다.':'카메라는 https 주소나 localhost에서만 켤 수 있어요. 지금은 마우스 모드로 동작합니다.');toast('시선 추적은 https 주소에서만 켤 수 있어요');return}st('시선 추적을 불러오는 중… 카메라 권한을 허용해 주세요');
+  st(L.protocol=='file:'?'파일을 바로 연 상태(file://)에서는 카메라를 쓸 수 없어요. https 주소(예: GitHub Pages)나 로컬 서버(localhost)로 열어 주세요. 지금은 마우스 모드로 동작합니다.':'카메라는 https 주소나 localhost에서만 켤 수 있어요. 지금은 마우스 모드로 동작합니다.');toast('시선 추적은 https 주소에서만 켤 수 있어요');return}
+ const ready=()=>!!(window.webgazer&&webgazer.isReady());
+ if(ready()){try{await webgazer.resume()}catch(e){}G.on=true;eyeTxt();st('시선 추적을 다시 켰어요. 어긋나면 🎯 보정을 눌러 주세요.');return}
+ starting=true;st('시선 추적을 불러오는 중… 카메라 권한을 허용해 주세요');let err=null;
  try{if(!window.webgazer)await loadJs(WG+'/webgazer.min.js');
   webgazer.params.faceMeshSolutionPath=WG+'/mediapipe/face_mesh';/* 기본값은 페이지 기준 상대 경로라 얼굴 모델을 못 찾음 */
-  await webgazer.setRegression('ridge').setGazeListener(d=>{if(d&&!cs)gz(d.x,d.y,.3)}).begin();webgazer.showPredictionPoints(false);
-  G.on=true;$('eyeB').classList.add('on');$('eyeB').textContent='👁 시선 추적 켜짐';calib()}
- catch(e){console.error(e);const n=e&&e.name;st(n=='NotAllowedError'?'카메라 권한이 거부되어 마우스 모드로 동작합니다. 주소창의 카메라 권한을 허용해 주세요.':n=='NotFoundError'?'카메라를 찾지 못해 마우스 모드로 동작합니다.':'시선 추적을 불러오지 못해 마우스 모드로 동작합니다. 인터넷 연결을 확인해 주세요.')}};
-$('calB').onclick=()=>G.on?calib():toast('먼저 시선 추적을 시작하세요');
+  webgazer.saveDataAcrossSessions(false);/* 지난번에 잘못 학습된 데이터를 불러오지 않음 */
+  webgazer.params.showGazeDot=false;
+  await webgazer.setRegression('ridge').setGazeListener(d=>{if(d&&G.on&&!cs)gz(d.x,d.y,.3)}).begin()}catch(e){err=e}
+ /* begin()은 첫 프레임 분석 오류만으로도 실패를 돌려주지만 카메라·추적은 계속 돌아감 → 실제 상태로 판단 */
+ for(let i=0;i<30&&!ready()&&err&&!/NotAllowed|NotFound|NotReadable|Overconstrained/.test(err.name);i++)await sl(100);
+ starting=false;
+ if(!ready()){console.error(err);const n=err&&err.name;st(n=='NotAllowedError'?'카메라 권한이 거부되어 마우스 모드로 동작합니다. 주소창의 카메라 권한을 허용해 주세요.':n=='NotFoundError'?'카메라를 찾지 못해 마우스 모드로 동작합니다.':n=='NotReadableError'?'다른 프로그램이 카메라를 쓰고 있어요. 그 프로그램을 끄고 다시 시도해 주세요.':'시선 추적을 불러오지 못해 마우스 모드로 동작합니다. ('+(err&&err.message||err)+')');return}
+ if(err)console.warn('WebGazer 첫 프레임 오류(무시하고 계속):',err);
+ webgazer.removeMouseEventListeners();/* 마우스 움직임·클릭을 시선으로 학습하지 않게 (보정 점만 학습) */
+ cam(false);G.on=true;eyeTxt();calib()};
+$('calB').onclick=()=>G.on?(G.cal||calib()):toast('먼저 시선 추적을 시작하세요');
 const med=a=>{a=a.filter(v=>v!==null).sort((x,y)=>x-y);return a.length?a[a.length>>1]:null};
 async function sample(ms){const a=[];for(const e=performance.now()+ms;performance.now()<e;){a.push(earNow());await sl(40)}return med(a)}
 function beep(){try{const A=beep.a||(beep.a=new AudioContext()),o=A.createOscillator(),g=A.createGain();o.frequency.value=880;g.gain.value=.2;o.connect(g).connect(A.destination);o.start();o.stop(A.currentTime+.25)}catch(e){}}
-async function calib(){const c=$('cal');c.style.display='block';G.cal=true;c.textContent='화면의 노란 점을 차례로 바라보세요';c.querySelectorAll('i').forEach(i=>i.remove());
- const pts=[[.08,.1],[.5,.1],[.92,.1],[.08,.5],[.5,.5],[.92,.5],[.08,.9],[.5,.9],[.92,.9]];
- for(const [px,py] of pts){const d=h('i');d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);const x=px*innerWidth,y=py*innerHeight;
-  for(let i=0;i<22;i++){try{webgazer.recordScreenPosition(x,y,'click')}catch(e){}await sl(90)}d.remove()}
- c.textContent='눈을 편하게 뜨고 화면을 보세요';await sl(600);const o=await sample(1500);
- c.textContent='눈을 감고, 삐 소리가 나면 뜨세요';await sl(900);const k=await sample(1500);beep();await sl(500);
- let msg='보정 완료! 보정이 어긋나면 🎯 보정을 다시 눌러 주세요.';
- if(o&&k!==null&&k<o*.92){EYE.ratio=Math.min(.88,Math.max(.5,(k+(o-k)*.45)/o));base=o}
- else msg='시선 보정은 끝났지만 눈 감김을 잘 측정하지 못했어요. 밝은 곳에서 🎯 보정을 다시 해 보세요.';
- c.style.display='none';cs=0;ring=[];G.cal=false;st(msg)}
+async function calib(){const c=$('cal'),say=t=>{c.querySelectorAll('i').forEach(i=>i.remove());c.textContent=t};c.style.display='block';G.cal=true;
+ /* 1) 얼굴 위치 맞추기: 이때만 카메라 화면을 가운데에 보여 줌 */
+ say('얼굴이 네모 안에 들어오고 테두리가 초록색이 되게 앉아 주세요. 머리는 되도록 움직이지 마세요.');
+ cam(true);
+ for(let i=0,ok=0;i<80&&ok<15;i++){ok=earNow()!==null?ok+1:0;await sl(100)}await sl(1200);
+ cam(false);
+ /* 2) 시선 보정: 이전 학습 데이터를 지우고, 눈이 점에 도착한 뒤(0.8초)부터 기록 */
+ try{await webgazer.clearData()}catch(e){}
+ /* WebGazer는 보정 데이터를 최근 50개만 기억해 앞쪽 점들을 잊어버림 → 모든 보정 점(13×18개)이 남도록 400개로 늘림 */
+ try{const W=webgazer.util.DataWindow;webgazer.getRegression().forEach(r=>['screenXClicksArray','screenYClicksArray','eyeFeaturesClicks','dataClicks'].forEach(k=>{if(r[k])r[k]=new W(400)}))}catch(e){console.warn(e)}
+ say('노란 점이 나타나면 점의 가운데를 바라보세요');await sl(1500);
+ const pts=[[.06,.08],[.5,.08],[.94,.08],[.06,.5],[.5,.5],[.94,.5],[.06,.92],[.5,.92],[.94,.92],[.28,.29],[.72,.29],[.28,.71],[.72,.71]],ears=[];
+ for(const [px,py] of pts){say('');const d=h('i');d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);const x=px*innerWidth,y=py*innerHeight;
+  await sl(800);d.classList.add('rec');const e=[];
+  for(let i=0;i<18;i++){try{webgazer.recordScreenPosition(x,y,'click')}catch(er){}e.push(earNow());await sl(70)}d.remove();ears.push(med(e))}
+ /* 3) 눈 감김 측정. 아래쪽을 볼 때 눈이 가장 작아지므로 '가장 작게 뜬 값'과 감은 값의 중간을 기준으로 */
+ say('눈을 감고, 삐 소리가 나면 뜨세요');await sl(900);const k=await sample(1500);beep();await sl(600);
+ const o=med(ears),lo=Math.min(...ears.filter(v=>v!==null));let msg='';
+ if(o&&k!==null&&isFinite(lo)&&k<lo*.92){base=o;EYE.ratio=Math.min(.9,Math.max(.45,(k+(lo-k)*.5)/o))}
+ else msg=' 눈 감김을 잘 측정하지 못했어요. 밝은 곳에서 다시 보정해 보세요.';
+ /* 4) 정확도 확인 (학습하지 않고 예측만 비교) */
+ const chk=[[.15,.15],[.85,.15],[.5,.5],[.15,.85],[.85,.85]];let err=0;
+ for(const [px,py] of chk){say('');const d=h('i');d.className='chk';d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);await sl(1000);
+  let sx=0,sy=0,n=0;for(let i=0;i<12;i++){sx+=G.x;sy+=G.y;n++;await sl(70)}err+=Math.hypot(sx/n-px*innerWidth,sy/n-py*innerHeight);d.remove()}
+ err/=chk.length;const pc=Math.round(err/Math.hypot(innerWidth,innerHeight)*100);
+ c.style.display='none';cs=0;ring=[];G.cal=false;
+ st((pc<=12?'보정 완료! ':'보정 완료. 정확도가 낮아요 — 얼굴을 밝게 비추고, 화면과 50~70cm 떨어져 머리를 고정한 채 🎯 보정을 다시 해 보세요. ')+`평균 오차 약 ${Math.round(err)}px (${pc}%).`+msg)}
 $('dwB').onclick=()=>{G.dwell=!G.dwell;$('dwB').classList.toggle('on',G.dwell);$('dwB').textContent=G.dwell?'⏱ 응시 선택 켜짐':'⏱ 응시 선택 꺼짐'};
 /* ---------- 음성 ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec,mic=false;
