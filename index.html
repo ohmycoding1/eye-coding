@@ -1,0 +1,211 @@
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>눈으로 코딩</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#eef2f7;--pn:#fff;--tx:#12203a;--bd:#b9c4da;--ac:#1d4ed8;--hl:#ef4444}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#0e1320;--pn:#192135;--tx:#eef1fa;--bd:#3a4560;--ac:#7aa5ff}}
+:root[data-theme=dark]{--bg:#0e1320;--pn:#192135;--tx:#eef1fa;--bd:#3a4560;--ac:#7aa5ff}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:600 18px/1.3 "Noto Sans KR","Malgun Gothic",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 12px;background:var(--pn);border-bottom:2px solid var(--bd)}
+h1{font-size:22px;margin:0 8px 0 0}
+button{font:inherit;color:inherit;cursor:pointer;border:2px solid var(--bd);background:var(--pn);border-radius:12px;min-height:52px;padding:8px 16px}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+#st{font-size:15px;opacity:.85;flex:1;min-width:160px}
+main{flex:1;display:grid;grid-template-columns:minmax(300px,34%) 1fr;gap:10px;padding:10px;min-height:0}
+#left,#right{background:var(--pn);border:2px solid var(--bd);border-radius:16px;padding:10px;display:flex;flex-direction:column;gap:10px;min-height:0}
+#stage{position:relative;width:100%;aspect-ratio:4/3;background:#fff;border:2px solid var(--bd);border-radius:10px;overflow:hidden;container-type:inline-size;cursor:crosshair}
+#spr{position:absolute;font-size:14cqw;line-height:1;user-select:none;cursor:pointer}
+#bub{position:absolute;background:#fff;color:#111;border:2px solid #333;border-radius:14px;padding:4px 10px;font-size:5cqw;transform:translate(-50%,-150%);max-width:70%;display:none;pointer-events:none}
+.bar{display:flex;gap:8px;flex-wrap:wrap}.bar button{flex:1;font-size:22px;min-height:64px}
+#runB{background:#15803d;color:#fff;border-color:#15803d}#stopB{background:#b91c1c;color:#fff;border-color:#b91c1c}
+#objs button{font-size:34px;min-height:70px;min-width:70px;padding:4px 10px}
+#objs button.on{outline:4px solid var(--ac)}
+#mt{height:10px;background:var(--bd);border-radius:6px;overflow:hidden}#mt i{display:block;height:100%;width:0;background:var(--hl)}
+#heard{font-size:15px;opacity:.9;min-height:40px}
+#tabs{display:flex;gap:8px;flex-wrap:wrap}
+#tabs button{font-size:21px;min-height:60px;color:#fff;border:3px solid transparent}
+#tabs button.on{border-color:var(--tx);box-shadow:0 0 0 3px var(--bg) inset}
+#wrap{flex:1;display:grid;grid-template-columns:minmax(260px,38%) 1fr;gap:10px;min-height:0}
+.pane{display:flex;flex-direction:column;min-height:0;border:2px solid var(--bd);border-radius:12px;background:var(--bg)}
+.pane>.sb{display:flex;gap:6px;padding:6px}.sb button{flex:1;min-height:48px}.sb span{align-self:center;font-size:14px;flex:2}
+.sc{flex:1;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+.pb{background:var(--c);color:#fff;border:3px solid rgba(0,0,0,.25);text-align:left;font-size:21px;min-height:76px;border-radius:14px}
+.ph{background:#fff;color:#111;border-radius:8px;padding:2px 8px;margin:0 3px;font-size:18px}
+.script{background:var(--pn);border:2px dashed var(--bd);border-radius:14px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.blk{background:var(--c);color:#fff;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:6px;font-size:21px}
+.blk.bool,.blk.rep{display:inline-flex;flex-direction:row;align-items:center;gap:4px;padding:4px 10px;border-radius:30px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:50px}
+.body{margin-left:22px;padding:6px;border-left:6px solid rgba(255,255,255,.55);display:flex;flex-direction:column;gap:6px;background:rgba(0,0,0,.14);border-radius:0 10px 10px 0}
+.zone{background:rgba(255,255,255,.88);color:#222;border:3px dashed #444;border-radius:10px;padding:10px;text-align:center;font-size:17px;min-height:48px;cursor:pointer}
+.zone.t{background:#fde047;border-style:solid;outline:4px solid var(--hl)}
+.slot{display:inline-flex;align-items:center;min-height:46px;cursor:pointer}
+.sb0{min-width:76px;justify-content:center;background:rgba(0,0,0,.28);border:3px dashed #fff;border-radius:30px}
+input{font:inherit;font-size:22px;min-height:46px;width:110px;border:3px solid #444;border-radius:10px;padding:2px 8px;color:#111;background:#fff}
+input.t{width:190px}
+.on3,input:focus{outline:5px solid #fde047}
+input.arm{outline:6px solid var(--hl);animation:bl 1s infinite}@keyframes bl{50%{outline-color:#fde047}}
+.del{min-height:44px;min-width:44px;padding:0 10px;margin-left:auto;background:rgba(0,0,0,.35);color:#fff;border:0}
+.gz{outline:5px solid #22c55e!important;outline-offset:2px}
+#cur{position:fixed;left:-20px;top:-20px;width:40px;height:40px;border-radius:50%;border:4px solid var(--hl);background:conic-gradient(rgba(239,68,68,.55) var(--p,0deg),transparent 0);pointer-events:none;z-index:99;transition:transform .05s linear}
+#cal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:98;display:none;color:#fff;font-size:26px;text-align:center;padding-top:30vh}
+#cal i{position:fixed;width:34px;height:34px;margin:-17px;border-radius:50%;background:#facc15;box-shadow:0 0 0 8px rgba(250,204,21,.4)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#111;color:#fff;padding:12px 20px;border-radius:30px;z-index:97;display:none;font-size:18px}
+@media(max-width:900px){main{grid-template-columns:1fr;overflow:auto}body{overflow:auto}#wrap{grid-template-columns:1fr;min-height:70vh}}
+</style></head><body>
+<header><h1>👁 눈으로 코딩</h1>
+<button id=eyeB>👁 시선 추적 시작</button><button id=calB>🎯 보정</button><button id=dwB>⏱ 응시 선택 꺼짐</button><button id=micB>🎤 음성 켜기</button><span id=st>마우스·스페이스바로도 사용할 수 있어요. 시선 추적을 시작하면 눈을 0.4초 이상 감아 선택합니다.</span></header>
+<main>
+<section id=left>
+<div id=stage><div id=spr>🤖</div><div id=bub></div></div>
+<div class=bar><button id=runB>▶ 실행</button><button id=stopB>■ 정지</button></div>
+<div id=objs class=bar></div>
+<div>👁 눈 감김 <div id=mt><i></i></div></div>
+<div id=heard>🎤 음성: 블록 이름을 말하면 추가되고, 빨간 칸을 선택한 뒤 말하면 그 칸에 입력돼요.</div>
+</section>
+<section id=right><div id=tabs></div>
+<div id=wrap>
+<div class=pane><div class=sb><button data-s="pal,-1">▲</button><button data-s="pal,1">▼</button><span>블록 고르기</span></div><div class=sc id=pal></div></div>
+<div class=pane><div class=sb><button data-s="ws,-1">▲</button><button data-s="ws,1">▼</button><button id=outB>↰ 밖으로</button><button id=clrB>모두 지우기</button></div><div class=sc id=ws></div></div>
+</div></section></main>
+<div id=cur></div><div id=cal></div><div id=toast></div>
+<script>
+const $=id=>document.getElementById(id),h=(t,c)=>{const e=document.createElement(t);if(c)e.className=c;return e};
+const CATS=[['start','시작','#a16207'],['flow','흐름','#c2410c'],['motion','움직임','#1d4ed8'],['look','형태','#7c3aed'],['judge','판단','#047857'],['calc','계산','#0e7490']];
+const CC=Object.fromEntries(CATS.map(c=>[c[0],c[2]]));
+const BL=[
+['flag','start','hat','시작하기 버튼을 클릭했을 때'],['mdown','start','hat','마우스를 클릭했을 때'],['mup','start','hat','마우스 클릭을 해제했을 때'],['odown','start','hat','오브젝트를 클릭했을 때'],['oup','start','hat','오브젝트 클릭을 해제했을 때'],
+['wait','flow','stack','{n:1}초 기다리기'],['repeat','flow','c','{n:10}번 반복하기'],['forever','flow','c','계속 반복하기'],['until','flow','c','{b}까지 반복하기'],['while','flow','c','{b}인 동안 반복하기'],['break','flow','stack','반복 중단하기'],['cont','flow','stack','이번 반복 건너뛰기'],['if','flow','c','만약 {b}라면'],['ifelse','flow','c2','만약 {b}라면'],
+['dx','motion','stack','x좌표를 {n:10}만큼 바꾸기'],['dy','motion','stack','y좌표를 {n:10}만큼 바꾸기'],['goto','motion','stack','x: {n:0} y: {n:0} 위치로 이동하기'],['rot','motion','stack','방향을 {n:15}만큼 회전하기'],['setdir','motion','stack','방향을 {n:90}으로 정하기'],
+['say','look','stack','{t:안녕!}을(를) 말하기'],['unsay','look','stack','말풍선 지우기'],['size','look','stack','크기를 {n:10}만큼 바꾸기'],['setsize','look','stack','크기를 {n:100}으로 정하기'],['rsize','look','stack','원래 크기로 되돌리기'],
+['mclick','judge','bool','마우스를 클릭했는가?'],['oclick','judge','bool','오브젝트를 클릭했는가?'],['eq','judge','bool','{v:0} = {v:0}'],['ne','judge','bool','{v:0} ≠ {v:0}'],['gt','judge','bool','{v:0} > {v:0}'],['lt','judge','bool','{v:0} < {v:0}'],['ge','judge','bool','{v:0} ≥ {v:0}'],['le','judge','bool','{v:0} ≤ {v:0}'],['and','judge','bool','{b} 그리고 {b}'],['or','judge','bool','{b} 또는 {b}'],
+['add','calc','rep','{v:0} + {v:0}'],['sub','calc','rep','{v:0} - {v:0}'],['mul','calc','rep','{v:0} x {v:0}'],['div','calc','rep','{v:0} / {v:0}']];
+const AL={eq:'같다',ne:'같지않다',gt:'크다',lt:'작다',ge:'크거나같다',le:'작거나같다',and:'그리고',or:'또는',add:'더하기',sub:'빼기',mul:'곱하기',div:'나누기',goto:'이동하기',ifelse:'만약아니면'};
+const norm=s=>s.toLowerCase().replace(/[\s.,!?~]/g,'');
+const D={};BL.forEach(([id,cat,k,l])=>{const parts=l.split(/(\{[^}]+\})/).filter(Boolean);D[id]={id,cat,k,parts,slots:parts.filter(p=>p[0]=='{').map(p=>[p[1],p.slice(3,-1)]),key:norm(l.replace(/\{[^}]+\}/g,''))+(k=='c2'?'아니면':'')}});
+let ws=[],target=null,act=null,armed=null,tab='start',gen=0;const par=new WeakMap();
+const mk=id=>({id,a:D[id].slots.map(s=>s[0]=='b'?null:s[1]),body:[],body2:[]});
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',2200)}
+const st=m=>$('st').textContent=m;
+/* ---------- 팔레트 ---------- */
+function tabs(){$('tabs').innerHTML='';CATS.forEach(([id,n,c])=>{const b=h('button');b.textContent=n;b.style.background=c;b.className=id==tab?'on':'';b.onclick=()=>{tab=id;tabs();pal()};$('tabs').append(b)})}
+function lab(d,ph){const f=document.createDocumentFragment();d.parts.forEach(p=>{if(p[0]=='{'){const s=h('span','ph');s.textContent=p[1]=='b'?'◇':p.slice(3,-1);f.append(s)}else f.append(p)});return f}
+function pal(){const p=$('pal');p.innerHTML='';BL.filter(b=>b[1]==tab).forEach(([id])=>{const b=h('button','pb');b.style.setProperty('--c',CC[tab]);b.append(lab(D[id]));if(D[id].k=='c2'){b.append(' / 아니면')}b.onclick=()=>{armed=null;add(id)};p.append(b)})}
+/* ---------- 작업 공간 ---------- */
+function slotEl(b,i,drawCb){const [t]=D[b.id].slots[i],v=b.a[i];
+ if(v&&typeof v=='object'){return rb(v,null,()=>{b.a[i]=t=='b'?null:'0';draw()})}
+ if(t=='b'){const s=h('span','slot sb0');s.textContent='◇';if(act&&act.b===b&&act.i==i)s.classList.add('on3');s.onclick=()=>{act={b,i};armed=null;draw()};return s}
+ const inp=h('input',t=='t'?'t':'');inp.value=v;inp.inputMode=t=='n'?'decimal':'text';
+ inp.oninput=()=>b.a[i]=inp.value;
+ inp.onfocus=()=>{act={b,i};armed=inp;inp.classList.add('arm');inp.dataset.t=t;st('🎤 말하면 이 칸에 입력됩니다')};
+ inp.onblur=()=>setTimeout(()=>inp.classList.remove('arm'),0);return inp}
+function rb(b,arr,delCb){const d=D[b.id],e=h('div','blk '+d.k);e.style.setProperty('--c',CC[d.cat]);
+ const row=h('div','row');let si=0;d.parts.forEach(p=>{if(p[0]=='{')row.append(slotEl(b,si++));else row.append(p)});
+ const x=h('button','del');x.textContent='✕';x.onclick=ev=>{ev.stopPropagation();delCb?delCb():(arr.splice(arr.indexOf(b),1),ws=ws.filter(s=>s.body.length),target=ws.length?ws[ws.length-1].body:null,act=null,draw())};row.append(x);e.append(row);
+ if(d.k=='c'||d.k=='c2'){par.set(b.body,arr);e.append(rbody(b.body,arr));if(d.k=='c2'){const r2=h('div','row');r2.textContent='아니면';par.set(b.body2,arr);e.append(r2,rbody(b.body2,arr))}}
+ return e}
+function rbody(a,p){const w=h('div','body');if(p===undefined)w.className='';a.forEach(b=>w.append(rb(b,a)));const z=h('div','zone'+(a===target?' t':''));z.textContent=a===target?'📍 블록이 여기에 추가돼요':'＋ 여기에 추가하기';z.onclick=()=>{target=a;act=null;draw()};w.append(z);return w}
+function draw(){const w=$('ws');const y=w.scrollTop;w.innerHTML='';ws.forEach(s=>{const e=h('div','script');par.set(s.body,null);s.body.forEach(b=>e.append(rb(b,s.body)));const z=h('div','zone'+(s.body===target?' t':''));z.textContent=s.body===target?'📍 블록이 여기에 추가돼요':'＋ 여기에 추가하기';z.onclick=()=>{target=s.body;act=null;draw()};e.append(z);w.append(e)});
+ if(!ws.length){w.innerHTML='<div style="padding:20px;opacity:.7">왼쪽에서 블록을 골라 보세요. 먼저 「시작」 블록을 고르면 좋아요.</div>'}w.scrollTop=y}
+function add(id,nums){const d=D[id],b=mk(id);
+ if(d.k=='bool'||d.k=='rep'){if(!act){toast('먼저 블록을 넣을 칸(◇ 또는 숫자 칸)을 선택하세요');return}
+  const t=D[act.b.id].slots[act.i][0];if(d.k=='rep'&&t=='b'){toast('계산 블록은 숫자 칸에 넣을 수 있어요');return}
+  act.b.a[act.i]=b;act=null;fill(b,nums);draw();return}
+ if(d.k=='hat'){const s={body:[b]};ws.push(s);target=s.body}else{if(!target){const s={body:[]};ws.push(s);target=s.body}target.push(b)}
+ fill(b,nums);act=null;
+ if(d.k=='c'||d.k=='c2'){par.set(b.body,target);par.set(b.body2,target);const bi=d.slots.findIndex(s=>s[0]=='b');if(bi>=0&&b.a[bi]===null)act={b,i:bi};target=b.body}
+ draw();$('ws').scrollTop=1e9}
+function fill(b,nums){if(!nums)return;let k=0;D[b.id].slots.forEach((s,i)=>{if(s[0]!='b'&&s[0]!='t'&&k<nums.length&&typeof b.a[i]!='object')b.a[i]=nums[k++]})}
+$('outB').onclick=()=>{const p=target&&par.get(target);if(p){target=p;draw()}else toast('이미 가장 바깥이에요')};
+$('clrB').onclick=()=>{ws=[];target=null;act=null;draw()};
+document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{const [id,d]=b.dataset.s.split(',');$(id).scrollBy(0,d*220)});
+/* ---------- 실행 ---------- */
+const S={x:0,y:0,dir:90,size:100,say:'',md:false,od:false},STOP={},BRK={},CNT={};
+const sl=ms=>new Promise(r=>setTimeout(r,ms));
+function paint(){const sp=$('spr'),l=(S.x+240)/480*100,t=(180-S.y)/360*100;sp.style.left=l+'%';sp.style.top=t+'%';sp.style.transform=`translate(-50%,-50%) rotate(${S.dir-90}deg) scale(${S.size/100})`;const b=$('bub');b.style.left=Math.min(Math.max(l,22),78)+'%';b.style.top=t+'%';b.style.display=S.say?'block':'none';b.textContent=S.say}
+const nm=v=>{const n=parseFloat(v);return isNaN(n)?0:n};
+function ev(a){if(a&&typeof a=='object')return evb(a);if(a===null)return false;const n=Number(a);return a!==''&&!isNaN(n)?n:a}
+function evb(b){const g=i=>ev(b.a[i]);const A=g(0),B=g(1),num=typeof A=='number'&&typeof B=='number';
+ switch(b.id){case'mclick':return S.md;case'oclick':return S.od;case'eq':return num?A==B:String(A)==String(B);case'ne':return num?A!=B:String(A)!=String(B);
+ case'gt':return nm(A)>nm(B);case'lt':return nm(A)<nm(B);case'ge':return nm(A)>=nm(B);case'le':return nm(A)<=nm(B);case'and':return !!A&&!!B;case'or':return !!A||!!B;
+ case'add':return nm(A)+nm(B);case'sub':return nm(A)-nm(B);case'mul':return nm(A)*nm(B);case'div':return nm(B)?nm(A)/nm(B):0}}
+async function ex(list,id){for(const b of list){if(id!=gen)throw STOP;await one(b,id);paint()}}
+async function loop(cond,b,id){while(cond()){if(id!=gen)throw STOP;try{await ex(b.body,id)}catch(e){if(e===BRK)return;if(e!==CNT)throw e}await sl(16)}}
+async function one(b,id){const g=i=>ev(b.a[i]),cx=v=>Math.max(-240,Math.min(240,v)),cy=v=>Math.max(-180,Math.min(180,v));
+ switch(b.id){case'wait':await sl(nm(g(0))*1000);break;
+ case'repeat':{let i=0,n=nm(g(0));await loop(()=>i++<n,b,id);break}
+ case'forever':await loop(()=>true,b,id);break;case'until':await loop(()=>!ev(b.a[0]),b,id);break;case'while':await loop(()=>ev(b.a[0]),b,id);break;
+ case'break':throw BRK;case'cont':throw CNT;
+ case'if':if(ev(b.a[0]))await ex(b.body,id);break;case'ifelse':await ex(ev(b.a[0])?b.body:b.body2,id);break;
+ case'dx':S.x=cx(S.x+nm(g(0)));break;case'dy':S.y=cy(S.y+nm(g(0)));break;case'goto':S.x=cx(nm(g(0)));S.y=cy(nm(g(1)));break;
+ case'rot':S.dir+=nm(g(0));break;case'setdir':S.dir=nm(g(0));break;
+ case'say':S.say=String(g(0));break;case'unsay':S.say='';break;case'size':S.size=Math.max(10,S.size+nm(g(0)));break;case'setsize':S.size=Math.max(10,nm(g(0)));break;case'rsize':S.size=100}}
+function launch(e){ws.forEach(s=>{if(s.body[0]&&s.body[0].id==e){const id=gen;ex(s.body.slice(1),id).catch(x=>{if(x!==STOP&&x!==BRK&&x!==CNT)console.error(x)})}})}
+function runAll(){gen++;resetObj();launch('flag')}
+$('runB').onclick=runAll;function resetObj(){Object.assign(S,{x:0,y:0,dir:90,size:100,say:'',md:false,od:false});paint()}
+function stopAll(){gen++;resetObj()}
+$('stopB').onclick=stopAll;
+const stg=$('stage');
+stg.addEventListener('mousedown',e=>{S.md=true;if(e.target.id=='spr'){S.od=true;launch('odown')}launch('mdown')});
+stg.addEventListener('mouseup',e=>{const was=S.od;S.md=false;S.od=false;launch('mup');if(was)launch('oup')});
+const OB=['🤖','🐱','🐶','🚀'];OB.forEach((o,i)=>{const b=h('button',i?'':'on');b.textContent=o;b.onclick=()=>{$('spr').textContent=o;[...$('objs').children].forEach(c=>c.classList.remove('on'));b.classList.add('on')};$('objs').append(b)});
+/* ---------- 시선 / 깜박임 ---------- */
+const G={on:false,x:innerWidth/2,y:innerHeight/2,dwell:false};let hov=null,dwT=0,cool=0;
+const cur=$('cur');
+function gz(x,y,k){G.x+=(x-G.x)*k;G.y+=(y-G.y)*k;cur.style.transform=`translate(${G.x}px,${G.y}px)`;
+ const el=document.elementFromPoint(G.x,G.y),t=el&&el.closest('button,input,.slot,.zone,#stage');
+ if(t!==hov){hov&&hov.classList.remove('gz');hov=t;t&&t.classList.add('gz');dwT=performance.now()}
+ let p=0;if(G.dwell&&t&&t.id!='stage'&&performance.now()>cool){p=(performance.now()-dwT)/1500;if(p>=1){fire(G.x,G.y);cool=performance.now()+1000;p=0}}cur.style.setProperty('--p',p*360+'deg')}
+document.addEventListener('mousemove',e=>{if(!G.on)gz(e.clientX,e.clientY,1)});
+function fire(x,y){const el=document.elementFromPoint(x,y);if(!el)return;const o={bubbles:true,clientX:x,clientY:y};
+ if(el.tagName=='INPUT'){el.focus();return}
+ ['mousedown','mouseup','click'].forEach(n=>el.dispatchEvent(new MouseEvent(n,o)));
+ cur.animate([{boxShadow:'0 0 0 0 #ef4444'},{boxShadow:'0 0 0 30px transparent'}],300)}
+document.addEventListener('keydown',e=>{if(e.code=='Space'&&e.target.tagName!='INPUT'){e.preventDefault();fire(G.x,G.y)}});
+let base=0,cs=0,ring=[];
+function blinkTick(){if(!G.on||!window.webgazer)return;let ear=null;
+ try{const p=webgazer.getTracker().getPositions();if(p&&p.length>380){const d=(a,b)=>Math.hypot(p[a][0]-p[b][0],p[a][1]-p[b][1]);
+  ear=((d(160,144)+d(158,153))/(2*d(33,133))+(d(385,380)+d(387,373))/(2*d(362,263)))/2}}catch(e){}
+ const now=performance.now();ring.push([G.x,G.y]);if(ring.length>10)ring.shift();
+ let closed=ear!==null?ear<base*.62:cs>0;
+ if(ear!==null&&!closed)base=base?base*.97+ear*.03:ear;
+ if(closed&&!cs){cs=now}
+ if(cs)$('mt').firstChild.style.width=Math.min(100,(now-cs)/4)+'%';
+ if(closed&&cs&&now-cs>400)$('mt').firstChild.style.background='#22c55e';
+ if(!closed&&cs){const t=now-cs;cs=0;$('mt').firstChild.style.width=0;$('mt').firstChild.style.background='';if(t>=400&&t<2000)fire(ring[0][0],ring[0][1])}}
+setInterval(blinkTick,40);
+function loadJs(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.append(s)})}
+$('eyeB').onclick=async()=>{st('시선 추적을 불러오는 중… 카메라 권한을 허용해 주세요');
+ try{if(!window.webgazer)await loadJs('https://cdn.jsdelivr.net/npm/webgazer/dist/webgazer.min.js');
+  await webgazer.setRegression('ridge').setGazeListener(d=>{if(d)gz(d.x,d.y,.3)}).begin();webgazer.showPredictionPoints(false);
+  G.on=true;$('eyeB').classList.add('on');$('eyeB').textContent='👁 시선 추적 켜짐';calib()}
+ catch(e){st('카메라 또는 시선 라이브러리를 사용할 수 없어 마우스 모드로 동작합니다. (브라우저에서 직접 열면 카메라가 동작합니다)')}};
+$('calB').onclick=()=>G.on?calib():toast('먼저 시선 추적을 시작하세요');
+async function calib(){const c=$('cal');c.style.display='block';c.textContent='화면의 노란 점을 차례로 바라보세요';c.querySelectorAll('i').forEach(i=>i.remove());
+ const pts=[[.08,.1],[.5,.1],[.92,.1],[.08,.5],[.5,.5],[.92,.5],[.08,.9],[.5,.9],[.92,.9]];
+ for(const [px,py] of pts){const d=h('i');d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);const x=px*innerWidth,y=py*innerHeight;
+  for(let i=0;i<22;i++){try{webgazer.recordScreenPosition(x,y,'click')}catch(e){}await sl(90)}d.remove()}
+ c.style.display='none';st('보정 완료! 보정이 어긋나면 🎯 보정을 다시 눌러 주세요.')}
+$('dwB').onclick=()=>{G.dwell=!G.dwell;$('dwB').classList.toggle('on',G.dwell);$('dwB').textContent=G.dwell?'⏱ 응시 선택 켜짐':'⏱ 응시 선택 꺼짐'};
+/* ---------- 음성 ---------- */
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec,mic=false;
+$('micB').onclick=()=>{if(!SR){toast('이 브라우저는 음성 인식을 지원하지 않아요 (Chrome 권장)');return}
+ if(mic){mic=false;rec.stop();$('micB').classList.remove('on');$('micB').textContent='🎤 음성 켜기';return}
+ rec=new SR();rec.lang='ko-KR';rec.continuous=true;rec.interimResults=true;rec.onspeechstart=()=>$('heard').textContent='🎤 말소리를 감지했어요…';rec.onresult=e=>{let it='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)heard(r[0].transcript.trim());else it+=r[0].transcript}if(it)$('heard').textContent='🎤 듣는 중: '+it};
+ rec.onend=()=>{if(mic)try{rec.start()}catch(e){}};rec.onerror=e=>{if(e.error=='not-allowed'){mic=false;toast('마이크 권한이 필요해요')}};
+ rec.start();mic=true;$('micB').classList.add('on');$('micB').textContent='🎤 듣는 중'};
+const KD={영:0,공:0,일:1,이:2,삼:3,사:4,오:5,육:6,칠:7,팔:8,구:9};
+function pn(s){s=s.replace(/마이너스/g,'-').replace(/\s/g,'');const m=s.match(/-?\d+(\.\d+)?/);if(m)return m[0];let t=0,c=0,f=0;for(const ch of s){if(ch in KD){c=KD[ch];f=1}else if(ch=='십'){t+=(f?c:1)*10;c=0;f=0}else if(ch=='백'){t+=(f?c:1)*100;c=0;f=0}}t+=c;return(f||t)?String((s[0]=='-'?-1:1)*t):null}
+const jm=s=>[...s].map(c=>{const n=c.charCodeAt(0)-44032;if(n<0||n>11171)return c;return String.fromCharCode(0x1100+Math.floor(n/588),0x1161+Math.floor(n%588/28))+(n%28?String.fromCharCode(0x11A7+n%28):'')}).join('');
+const bg=s=>{const m=new Map;for(let i=0;i<s.length-1;i++){const k=s.slice(i,i+2);m.set(k,(m.get(k)||0)+1)}return m};
+function sim(a,b){a=jm(a);b=jm(b);if(a.length<3||b.length<3)return 0;const A=bg(a),B=bg(b);let o=0;A.forEach((v,k)=>{if(B.has(k))o+=Math.min(v,B.get(k))});return 2*o/(a.length+b.length-2)+.4*o/(a.length-1)}
+function heard(t){$('heard').textContent='🎤 "'+t+'"';
+ if(armed&&armed.isConnected){const ty=armed.dataset.t;let v=t;if(ty!='t'){v=pn(t);if(v===null){toast('숫자를 알아듣지 못했어요');return}}else v=t.replace(/[.。]$/,'');
+  armed.value=v;armed.dispatchEvent(new Event('input'));armed.blur();armed=null;toast('입력: '+v);return}
+ const sp=norm(t),spw=norm(t.replace(/-?\d+(\.\d+)?/g,''));
+ const C={실행:runAll,실행해:runAll,정지:stopAll,멈춰:stopAll,밖으로:()=>$('outB').click(),나가기:()=>$('outB').click(),모두지우기:()=>$('clrB').click(),입력:()=>{const b=ws.length&&(function f(a){return a[a.length-1]})(target||ws[ws.length-1].body);const i=b&&$('ws').querySelector('input');if(i)i.focus()}};
+ if(C[sp]){C[sp]();return}
+ let best=null,sc=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){let s=0;if(spw.length>=2&&spw.includes(k)&&k.length>=2)s=k.length+1;else if(spw.length>=3&&k.includes(spw))s=spw.length*.8;if(s>sc){sc=s;best=id}}}
+ let fz=false;if(!best&&spw.length>=2){let fs=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){const s=sim(spw,k);if(s>fs){fs=s;best=id}}}if(fs<.6)best=null;else fz=true}
+ if(best){const n=t.match(/-?\d+(\.\d+)?/g);add(best,n);toast((fz?'비슷한 블록으로 추가: ':'추가: ')+D[best].parts.map(p=>p[0]=='{'?'□':p).join(''))}else toast('비슷한 블록을 찾지 못했어요. 다시 말해 주세요')}
+tabs();pal();draw();paint();
+</script></body></html>
