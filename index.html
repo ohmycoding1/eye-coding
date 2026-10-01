@@ -45,6 +45,7 @@ input.t{width:190px}
 .on3,input:focus{outline:5px solid #fde047}
 input.arm{outline:6px solid var(--hl);animation:bl 1s infinite}@keyframes bl{50%{outline-color:#fde047}}
 .del{min-height:44px;min-width:44px;padding:0 10px;margin-left:auto;background:rgba(0,0,0,.35);color:#fff;border:0}
+.warn{background:#fef3c7;color:#713f12;border-radius:10px;padding:8px 10px;font-size:16px}
 .gz{outline:5px solid #22c55e!important;outline-offset:2px}
 #cur{position:fixed;left:-20px;top:-20px;width:40px;height:40px;border-radius:50%;border:4px solid var(--hl);background:conic-gradient(rgba(239,68,68,.55) var(--p,0deg),transparent 0);pointer-events:none;z-index:99;transition:transform .05s linear}
 #cal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:98;display:none;color:#fff;font-size:26px;text-align:center;padding-top:30vh}
@@ -92,25 +93,31 @@ function lab(d,ph){const f=document.createDocumentFragment();d.parts.forEach(p=>
 function pal(){const p=$('pal');p.innerHTML='';BL.filter(b=>b[1]==tab).forEach(([id])=>{const b=h('button','pb');b.style.setProperty('--c',CC[tab]);b.append(lab(D[id]));if(D[id].k=='c2'){b.append(' / 아니면')}b.onclick=()=>{armed=null;add(id)};p.append(b)})}
 /* ---------- 작업 공간 ---------- */
 function slotEl(b,i,drawCb){const [t]=D[b.id].slots[i],v=b.a[i];
- if(v&&typeof v=='object'){return rb(v,null,()=>{b.a[i]=t=='b'?null:'0';draw()})}
+ if(v&&typeof v=='object'){return rb(v,null,()=>{b.a[i]=t=='b'?null:'0';tidy()})}
  if(t=='b'){const s=h('span','slot sb0');s.textContent='◇';if(act&&act.b===b&&act.i==i)s.classList.add('on3');s.onclick=()=>{act={b,i};armed=null;draw()};return s}
  const inp=h('input',t=='t'?'t':'');inp.value=v;inp.inputMode=t=='n'?'decimal':'text';
  inp.oninput=()=>b.a[i]=inp.value;
  inp.onfocus=()=>{act={b,i};armed=inp;inp.classList.add('arm');inp.dataset.t=t;st('🎤 말하면 이 칸에 입력됩니다')};
  inp.onblur=()=>setTimeout(()=>inp.classList.remove('arm'),0);return inp}
+/* 지금 작업 공간에 남아 있는 블록 목록(A)과 블록(B)을 모읍니다 */
+function live(){const A=new Set,B=new Set,g=v=>{B.add(v);v.a.forEach(x=>x&&typeof x=='object'&&g(x))},f=a=>{A.add(a);a.forEach(b=>{g(b);if(D[b.id].k=='c'||D[b.id].k=='c2'){f(b.body);f(b.body2)}})};ws.forEach(s=>f(s.body));return{A,B}}
+/* 삭제 뒤에도 추가 위치를 유지하고, 사라진 곳을 가리키면 가장 가까운 곳으로 옮깁니다 */
+function tidy(arr){const{A,B}=live();if(target&&!A.has(target))target=arr&&A.has(arr)?arr:ws.length?ws[ws.length-1].body:null;if(act&&!B.has(act.b))act=null;draw()}
+function del(arr,b){arr.splice(arr.indexOf(b),1);ws=ws.filter(s=>s.body.length);tidy(arr)}
+const root=a=>{let p;while((p=par.get(a)))a=p;return a},elOf=new WeakMap;
 function rb(b,arr,delCb){const d=D[b.id],e=h('div','blk '+d.k);e.style.setProperty('--c',CC[d.cat]);
  const row=h('div','row');let si=0;d.parts.forEach(p=>{if(p[0]=='{')row.append(slotEl(b,si++));else row.append(p)});
- const x=h('button','del');x.textContent='✕';x.onclick=ev=>{ev.stopPropagation();delCb?delCb():(arr.splice(arr.indexOf(b),1),ws=ws.filter(s=>s.body.length),target=ws.length?ws[ws.length-1].body:null,act=null,draw())};row.append(x);e.append(row);
+ const x=h('button','del');x.textContent='✕';x.onclick=ev=>{ev.stopPropagation();delCb?delCb():del(arr,b)};row.append(x);e.append(row);elOf.set(b,e);
  if(d.k=='c'||d.k=='c2'){par.set(b.body,arr);e.append(rbody(b.body,arr));if(d.k=='c2'){const r2=h('div','row');r2.textContent='아니면';par.set(b.body2,arr);e.append(r2,rbody(b.body2,arr))}}
  return e}
-function rbody(a,p){const w=h('div','body');if(p===undefined)w.className='';a.forEach(b=>w.append(rb(b,a)));const z=h('div','zone'+(a===target?' t':''));z.textContent=a===target?'📍 블록이 여기에 추가돼요':'＋ 여기에 추가하기';z.onclick=()=>{target=a;act=null;draw()};w.append(z);return w}
-function draw(){const w=$('ws');const y=w.scrollTop;w.innerHTML='';ws.forEach(s=>{const e=h('div','script');par.set(s.body,null);s.body.forEach(b=>e.append(rb(b,s.body)));const z=h('div','zone'+(s.body===target?' t':''));z.textContent=s.body===target?'📍 블록이 여기에 추가돼요':'＋ 여기에 추가하기';z.onclick=()=>{target=s.body;act=null;draw()};e.append(z);w.append(e)});
+function rbody(a,p){const w=h('div','body');a.forEach(b=>w.append(rb(b,a)));const z=h('div','zone'+(a===target?' t':''));z.textContent=a===target?'📍 블록이 여기에 추가돼요':'＋ 여기에 추가하기';z.onclick=()=>{target=a;act=null;draw()};w.append(z);return w}
+function draw(){const w=$('ws');const y=w.scrollTop;w.innerHTML='';ws.forEach(s=>{const e=h('div','script');par.set(s.body,null);if(s.body[0]&&D[s.body[0].id].k!='hat'){const n=h('div','warn');n.textContent='⚠ 시작 블록이 없어 실행되지 않아요. 이 묶음에 추가 위치를 둔 채 「시작」 블록을 고르면 맨 위에 붙어요.';e.append(n)}s.body.forEach(b=>e.append(rb(b,s.body)));const z=h('div','zone'+(s.body===target?' t':''));z.textContent=s.body===target?'📍 블록이 여기에 추가돼요':'＋ 여기에 추가하기';z.onclick=()=>{target=s.body;act=null;draw()};e.append(z);w.append(e)});
  if(!ws.length){w.innerHTML='<div style="padding:20px;opacity:.7">왼쪽에서 블록을 골라 보세요. 먼저 「시작」 블록을 고르면 좋아요.</div>'}w.scrollTop=y}
 function add(id,nums){const d=D[id],b=mk(id);
  if(d.k=='bool'||d.k=='rep'){if(!act){toast('먼저 블록을 넣을 칸(◇ 또는 숫자 칸)을 선택하세요');return}
   const t=D[act.b.id].slots[act.i][0];if(d.k=='rep'&&t=='b'){toast('계산 블록은 숫자 칸에 넣을 수 있어요');return}
   act.b.a[act.i]=b;act=null;fill(b,nums);draw();return}
- if(d.k=='hat'){const s={body:[b]};ws.push(s);target=s.body}else{if(!target){const s={body:[]};ws.push(s);target=s.body}target.push(b)}
+ if(d.k=='hat'){const r=target&&root(target),s=r&&ws.find(s=>s.body===r);if(s&&s.body[0]&&D[s.body[0].id].k!='hat')s.body.unshift(b);else{const n={body:[b]};ws.push(n);target=n.body}}else{if(!target){const s={body:[]};ws.push(s);target=s.body}target.push(b)}
  fill(b,nums);act=null;
  if(d.k=='c'||d.k=='c2'){par.set(b.body,target);par.set(b.body2,target);const bi=d.slots.findIndex(s=>s[0]=='b');if(bi>=0&&b.a[bi]===null)act={b,i:bi};target=b.body}
  draw();$('ws').scrollTop=1e9}
@@ -133,7 +140,7 @@ async function loop(cond,b,id){while(cond()){if(id!=gen)throw STOP;try{await ex(
 async function one(b,id){const g=i=>ev(b.a[i]),cx=v=>Math.max(-240,Math.min(240,v)),cy=v=>Math.max(-180,Math.min(180,v));
  switch(b.id){case'wait':await sl(nm(g(0))*1000);break;
  case'repeat':{let i=0,n=nm(g(0));await loop(()=>i++<n,b,id);break}
- case'forever':await loop(()=>true,b,id);break;case'until':await loop(()=>!ev(b.a[0]),b,id);break;case'while':await loop(()=>ev(b.a[0]),b,id);break;
+ case'forever':await loop(()=>true,b,id);break;case'until':if(b.a[0]===null){toast('「~까지 반복하기」의 조건 칸(◇)이 비어 있어 건너뛰었어요');break}await loop(()=>!ev(b.a[0]),b,id);break;case'while':await loop(()=>ev(b.a[0]),b,id);break;
  case'break':throw BRK;case'cont':throw CNT;
  case'if':if(ev(b.a[0]))await ex(b.body,id);break;case'ifelse':await ex(ev(b.a[0])?b.body:b.body2,id);break;
  case'dx':S.x=cx(S.x+nm(g(0)));break;case'dy':S.y=cy(S.y+nm(g(0)));break;case'goto':S.x=cx(nm(g(0)));S.y=cy(nm(g(1)));break;
@@ -174,7 +181,7 @@ function blinkTick(){if(!G.on||!window.webgazer)return;let ear=null;
  if(!closed&&cs){const t=now-cs;cs=0;$('mt').firstChild.style.width=0;$('mt').firstChild.style.background='';if(t>=400&&t<2000)fire(ring[0][0],ring[0][1])}}
 setInterval(blinkTick,40);
 function loadJs(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.append(s)})}
-$('eyeB').onclick=async()=>{st('시선 추적을 불러오는 중… 카메라 권한을 허용해 주세요');
+$('eyeB').onclick=async()=>{if(!window.isSecureContext||!navigator.mediaDevices){st('카메라는 https 주소나 localhost에서만 켤 수 있어요. 지금은 마우스 모드로 동작합니다.');toast('카메라를 쓸 수 없는 주소예요 (https 필요)');return}st('시선 추적을 불러오는 중… 카메라 권한을 허용해 주세요');
  try{if(!window.webgazer)await loadJs('https://cdn.jsdelivr.net/npm/webgazer/dist/webgazer.min.js');
   await webgazer.setRegression('ridge').setGazeListener(d=>{if(d)gz(d.x,d.y,.3)}).begin();webgazer.showPredictionPoints(false);
   G.on=true;$('eyeB').classList.add('on');$('eyeB').textContent='👁 시선 추적 켜짐';calib()}
@@ -198,11 +205,12 @@ function pn(s){s=s.replace(/마이너스/g,'-').replace(/\s/g,'');const m=s.matc
 const jm=s=>[...s].map(c=>{const n=c.charCodeAt(0)-44032;if(n<0||n>11171)return c;return String.fromCharCode(0x1100+Math.floor(n/588),0x1161+Math.floor(n%588/28))+(n%28?String.fromCharCode(0x11A7+n%28):'')}).join('');
 const bg=s=>{const m=new Map;for(let i=0;i<s.length-1;i++){const k=s.slice(i,i+2);m.set(k,(m.get(k)||0)+1)}return m};
 function sim(a,b){a=jm(a);b=jm(b);if(a.length<3||b.length<3)return 0;const A=bg(a),B=bg(b);let o=0;A.forEach((v,k)=>{if(B.has(k))o+=Math.min(v,B.get(k))});return 2*o/(a.length+b.length-2)+.4*o/(a.length-1)}
+function focusInput(){const a=target||(ws.length?ws[ws.length-1].body:[]);let i=null;for(let k=a.length-1;k>=0&&!i;k--){const e=elOf.get(a[k]);i=e&&e.isConnected&&e.querySelector('input')}i=i||$('ws').querySelector('input');if(i){i.focus();i.scrollIntoView({block:'center'})}else toast('입력할 칸이 없어요')}
 function heard(t){$('heard').textContent='🎤 "'+t+'"';
  if(armed&&armed.isConnected){const ty=armed.dataset.t;let v=t;if(ty!='t'){v=pn(t);if(v===null){toast('숫자를 알아듣지 못했어요');return}}else v=t.replace(/[.。]$/,'');
   armed.value=v;armed.dispatchEvent(new Event('input'));armed.blur();armed=null;toast('입력: '+v);return}
  const sp=norm(t),spw=norm(t.replace(/-?\d+(\.\d+)?/g,''));
- const C={실행:runAll,실행해:runAll,정지:stopAll,멈춰:stopAll,밖으로:()=>$('outB').click(),나가기:()=>$('outB').click(),모두지우기:()=>$('clrB').click(),입력:()=>{const b=ws.length&&(function f(a){return a[a.length-1]})(target||ws[ws.length-1].body);const i=b&&$('ws').querySelector('input');if(i)i.focus()}};
+ const C={실행:runAll,실행해:runAll,정지:stopAll,멈춰:stopAll,밖으로:()=>$('outB').click(),나가기:()=>$('outB').click(),모두지우기:()=>$('clrB').click(),입력:focusInput};
  if(C[sp]){C[sp]();return}
  let best=null,sc=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){let s=0;if(spw.length>=2&&spw.includes(k)&&k.length>=2)s=k.length+1;else if(spw.length>=3&&k.includes(spw))s=spw.length*.8;if(s>sc){sc=s;best=id}}}
  let fz=false;if(!best&&spw.length>=2){let fs=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){const s=sim(spw,k);if(s>fs){fs=s;best=id}}}if(fs<.6)best=null;else fz=true}
