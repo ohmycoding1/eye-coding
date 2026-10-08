@@ -49,7 +49,7 @@ input.arm{outline:6px solid var(--hl);animation:bl 1s infinite}@keyframes bl{50%
 .gz{outline:5px solid #22c55e!important;outline-offset:2px}
 .blk.tgt{outline:5px dashed #22d3ee;outline-offset:3px}
 #cur{position:fixed;left:-20px;top:-20px;width:40px;height:40px;border-radius:50%;border:4px solid var(--hl);background:conic-gradient(rgba(239,68,68,.55) var(--p,0deg),transparent 0);pointer-events:none;z-index:99;transition:transform .05s linear}
-#cal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:98;display:none;color:#fff;font-size:26px;text-align:center;padding-top:30vh}
+#cal{white-space:pre-line;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:98;display:none;color:#fff;font-size:26px;text-align:center;padding-top:30vh}
 #cal i{position:fixed;width:34px;height:34px;margin:-17px;border-radius:50%;background:#facc15;box-shadow:0 0 0 8px rgba(250,204,21,.4)}
 #cal i.rec{background:#22c55e;box-shadow:0 0 0 8px rgba(34,197,94,.4)}#cal i.chk{background:#60a5fa;box-shadow:0 0 0 8px rgba(96,165,250,.4)}
 body.pv #webgazerVideoContainer{left:50%!important;top:50%!important;transform:translate(-50%,-10%) scale(1.4);z-index:100!important}
@@ -57,7 +57,7 @@ body.pv #webgazerVideoContainer{left:50%!important;top:50%!important;transform:t
 @media(max-width:900px){main{grid-template-columns:1fr;overflow:auto}body{overflow:auto}#wrap{grid-template-columns:1fr;min-height:70vh}}
 </style></head><body>
 <header><h1>👁 눈으로 코딩</h1>
-<button id=eyeB>👁 시선 추적 시작</button><button id=calB>🎯 보정</button><button id=dwB>⏱ 응시 선택 꺼짐</button><button id=micB>🎤 음성 켜기</button><span id=st>마우스·스페이스바로도 사용할 수 있어요. 시선 추적을 시작하면 눈을 0.4초 이상 감아 선택합니다.</span></header>
+<button id=eyeB>👁 시선 추적 시작</button><button id=calB>🎯 보정</button><button id=dwB>⏱ 응시 선택 꺼짐</button><button id=senB>🐢 시선 속도: 안정</button><button id=micB>🎤 음성 켜기</button><span id=st>마우스·스페이스바로도 사용할 수 있어요. 시선 추적을 시작하면 눈을 0.4초 이상 감아 선택합니다.</span></header>
 <main>
 <section id=left>
 <div id=stage><div id=spr>🤖</div><div id=bub></div></div>
@@ -204,12 +204,16 @@ function parseStruct(t){t=t.trim().replace(/[.。?!]+$/,'');let m;
 function ctlKind(t){const u0=norm(t).replace(/[을를]/g,'');let u=u0;
  for(let i=0;i<3;i++)u=u.replace(/(시작|켜기|켜줘|켜|하기|해주세요|해줘|주세요|해|줘)$/,'');
  if(/^(시선추적|아이트래킹|아이트랙킹|시선추적기|시선트래킹)$/.test(u))return'eye';
+ if(/^(정밀|자세히|꼼꼼히|9점)보정$/.test(u))return'cal2';
  if(/^(다시|재|눈)?보정$/.test(u))return'cal';
+ if(u0.includes('감도')||u0.includes('시선속도')||(u0.includes('시선')&&/(느리|빠르|천천)/.test(u0)))return/(낮|느리|천천|안정|줄)/.test(u0)?'senlo':/(높|빠르|올|민감)/.test(u0)?'senhi':/보통/.test(u0)?'senmid':'sentog';
  if(u0.includes('응시선택')||/^응시(모드)?(켜|끄|꺼|시작|해제)/.test(u0))return/(끄|꺼|해제|중지|정지|비활성)/.test(u0)?'dwoff':/(켜|시작|활성)/.test(u0)?'dwon':'dwtog';
  return null}
 function runCtl(k){armed=null;
  if(k=='eye'){if(G.on)toast('시선 추적이 이미 켜져 있어요. "보정"이라고 말하면 다시 보정해요');else{toast('시선 추적을 시작합니다');$('eyeB').click()}}
  else if(k=='cal'){toast('보정을 시작합니다');$('calB').click()}
+ else if(k=='cal2'){if(G.on){toast('정밀 보정을 시작합니다');calib(true)}else toast('먼저 "시선 추적 시작"이라고 말해 주세요')}
+ else if(k.startsWith('sen')){setSens(k=='senlo'?gsI-1:k=='senhi'?gsI+1:k=='senmid'?1:(gsI+1)%3);toast('시선 속도: '+GS_LV[gsI][0])}
  else{const v=k=='dwon'?true:k=='dwoff'?false:!G.dwell;if(G.dwell!==v)$('dwB').click();toast('응시 선택 '+(G.dwell?'켜짐':'꺼짐'))}}
 function runCmd(k){({undo,redo,dup:()=>dupBlock(pickBlk()),del:()=>delBlock(pickBlk())})[k]()}
 $('undoB').onclick=undo;$('redoB').onclick=redo;
@@ -267,9 +271,21 @@ stg.addEventListener('mousedown',e=>{S.md=true;if(e.target.id=='spr'){S.od=true;
 stg.addEventListener('mouseup',e=>{const was=S.od;S.md=false;S.od=false;launch('mup');if(was)launch('oup')});
 const OB=['🤖','🐱','🐶','🚀'];OB.forEach((o,i)=>{const b=h('button',i?'':'on');b.textContent=o;b.onclick=()=>{$('spr').textContent=o;[...$('objs').children].forEach(c=>c.classList.remove('on'));b.classList.add('on')};$('objs').append(b)});
 /* ---------- 시선 / 깜박임 ---------- */
-const G={on:false,last:0,x:innerWidth/2,y:innerHeight/2,dwell:false};/* last: 마지막으로 시선 데이터를 받은 시각 */
+const G={on:false,last:0,hold:0,skip:false,x:innerWidth/2,y:innerHeight/2,dwell:false};/* last: 마지막으로 시선 데이터를 받은 시각 */
 const noGaze=()=>!G.on||performance.now()-G.last>1500;/* 시선 데이터가 안 들어오면 마우스로 대신 움직임 */let hov=null,dwT=0,cool=0;
 const cur=$('cur');
+/* 시선 안정화: One-Euro 필터(가만히 볼 땐 강하게 부드럽게, 빨리 움직일 땐 빠르게 따라감) + 데드존(작은 흔들림 무시) */
+const GS_LV=[['안정',20,55,160,5],['보통',12,35,130,4],['빠름',6,18,100,3]];let gsI=0;const GS={win:20,dz:55,jump:160,sac:5},GF={x:null},GW=[];
+function setSens(i){gsI=Math.max(0,Math.min(2,i));const v=GS_LV[gsI];GS.win=v[1];GS.dz=v[2];GS.jump=v[3];GS.sac=v[4];$('senB').textContent='🐢 시선 속도: '+v[0]}
+const medn=a=>{const b=[...a].sort((x,y)=>x-y),n=b.length;return n%2?b[n>>1]:(b[n/2-1]+b[n/2])/2};
+/* 시선 안정화: 최근 샘플의 '중앙값'만 따라가서 튀는 값(이상치)을 버리고, 작은 움직임은 데드존으로 무시.
+   멀리 떨어진 샘플이 연속으로 들어올 때만(=진짜로 눈을 옮김) 새 위치로 빠르게 이동합니다. */
+function gazeIn(x,y){
+ if(GF.x===null){GW.length=0;GF.x=1;GW.push([x,y]);gz(x,y,1);return}
+ GW.push([x,y]);if(GW.length>GS.win)GW.shift();
+ if(GW.length>=GS.sac&&GW.slice(-GS.sac).every(q=>Math.hypot(q[0]-G.x,q[1]-G.y)>GS.jump))GW.splice(0,GW.length-GS.sac);
+ const mx=medn(GW.map(q=>q[0])),my=medn(GW.map(q=>q[1])),d=Math.hypot(mx-G.x,my-G.y);
+ if(d<GS.dz)return;gz(mx,my,.35)}
 function gz(x,y,k){x=Math.max(0,Math.min(innerWidth-1,x));y=Math.max(0,Math.min(innerHeight-1,y));G.x+=(x-G.x)*k;G.y+=(y-G.y)*k;cur.style.transform=`translate(${G.x}px,${G.y}px)`;
  const el=document.elementFromPoint(G.x,G.y);let t=el&&el.closest('button,input,.slot,.zone,#stage');
  {const bk=el&&!el.closest('.zone')&&el.closest('.blk');if(bk!==gz.bk){gz.bk&&gz.bk.classList.remove('tgt');gz.bk=bk;bk&&bk.classList.add('tgt')}}
@@ -295,7 +311,7 @@ function blinkTick(){if(!G.on||!window.webgazer||G.cal)return;const ear=earNow()
  if(closed&&!cs){cs=now;cpos=ring[0]||[G.x,G.y]}/* 감기 시작 직전(약 0.4초 전) 시선 위치 */
  if(cs)m.style.width=Math.min(100,(now-cs)/4)+'%';
  if(closed&&cs&&now-cs>400)m.style.background='#22c55e';
- if(!closed&&cs){const t=now-cs;cs=0;m.style.width=0;m.style.background='';ring=[];if(t>=400&&t<2000)fire(cpos[0],cpos[1])}}
+ if(!closed&&cs){const t=now-cs;cs=0;G.hold=now+300;m.style.width=0;m.style.background='';ring=[];if(t>=400&&t<2000)fire(cpos[0],cpos[1])}}
 setInterval(blinkTick,40);
 const WG='https://cdn.jsdelivr.net/npm/webgazer@3.5.3/dist';
 function loadJs(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.append(s)})}
@@ -314,7 +330,7 @@ $('eyeB').onclick=async()=>{if(starting||G.cal)return;if(G.on){webgazer.pause();
   webgazer.params.faceMeshSolutionPath=WG+'/mediapipe/face_mesh';/* 기본값은 페이지 기준 상대 경로라 얼굴 모델을 못 찾음 */
   webgazer.saveDataAcrossSessions(false);/* 지난번에 잘못 학습된 데이터를 불러오지 않음 */
   webgazer.params.showGazeDot=false;
-  const bp=webgazer.setRegression('ridge').setGazeListener(d=>{if(d){G.last=performance.now();if(G.on&&!cs)gz(d.x,d.y,.3)}}).begin();
+  const bp=webgazer.setRegression('ridge').setGazeListener(d=>{if(d){G.last=performance.now();if(G.on&&!cs&&performance.now()>G.hold)gazeIn(d.x,d.y)}}).begin();
   await Promise.race([bp,sl(20000).then(()=>{throw new Error('timeout')})])}catch(e){err=e}/* 모델을 끝내 못 불러오면 20초 뒤 포기 */
  /* begin()은 첫 프레임 분석 오류만으로도 실패를 돌려주지만 카메라·추적은 계속 돌아감 → 실제 상태로 판단 */
  for(let i=0;i<30&&!ready()&&err&&!/NotAllowed|NotFound|NotReadable|Overconstrained/.test(err.name);i++)await sl(100);
@@ -327,34 +343,38 @@ $('calB').onclick=()=>G.on?(G.cal||calib()):$('eyeB').click();
 const med=a=>{a=a.filter(v=>v!==null).sort((x,y)=>x-y);return a.length?a[a.length>>1]:null};
 async function sample(ms){const a=[];for(const e=performance.now()+ms;performance.now()<e;){a.push(earNow());await sl(40)}return med(a)}
 function beep(){try{const A=beep.a||(beep.a=new AudioContext()),o=A.createOscillator(),g=A.createGain();o.frequency.value=880;g.gain.value=.2;o.connect(g).connect(A.destination);o.start();o.stop(A.currentTime+.25)}catch(e){}}
-async function calib(){const c=$('cal'),say=t=>{c.querySelectorAll('i').forEach(i=>i.remove());c.textContent=t};c.style.display='block';G.cal=true;
- /* 1) 얼굴 위치 맞추기: 이때만 카메라 화면을 가운데에 보여 줌 */
- say('얼굴이 네모 안에 들어오고 테두리가 초록색이 되게 앉아 주세요. 머리는 되도록 움직이지 마세요.');
- cam(true);
- for(let i=0,ok=0;i<80&&ok<15;i++){ok=earNow()!==null?ok+1:0;await sl(100)}await sl(1200);
- cam(false);
- /* 2) 시선 보정: 이전 학습 데이터를 지우고, 눈이 점에 도착한 뒤(0.8초)부터 기록 */
- try{await webgazer.clearData()}catch(e){}
- /* WebGazer는 보정 데이터를 최근 50개만 기억해 앞쪽 점들을 잊어버림 → 모든 보정 점(13×18개)이 남도록 400개로 늘림 */
- try{const W=webgazer.util.DataWindow;webgazer.getRegression().forEach(r=>['screenXClicksArray','screenYClicksArray','eyeFeaturesClicks','dataClicks'].forEach(k=>{if(r[k])r[k]=new W(400)}))}catch(e){console.warn(e)}
- say('노란 점이 나타나면 점의 가운데를 바라보세요');await sl(1500);
- const pts=[[.06,.08],[.5,.08],[.94,.08],[.06,.5],[.5,.5],[.94,.5],[.06,.92],[.5,.92],[.94,.92],[.28,.29],[.72,.29],[.28,.71],[.72,.71]],ears=[];
- for(const [px,py] of pts){say('');const d=h('i');d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);const x=px*innerWidth,y=py*innerHeight;
-  await sl(800);d.classList.add('rec');const e=[];
-  for(let i=0;i<18;i++){try{webgazer.recordScreenPosition(x,y,'click')}catch(er){}e.push(earNow());await sl(70)}d.remove();ears.push(med(e))}
+async function calib(full){const c=$('cal'),H='\n(건너뛰려면 화면을 누르거나 Esc)',say=t=>{c.querySelectorAll('i').forEach(i=>i.remove());c.textContent=t?t+H:''};
+ c.style.display='block';G.cal=true;G.skip=false;GF.x=null;
+ /* 1) 얼굴 위치 맞추기: 이때만 카메라 화면을 가운데에 보여 줌 (얼굴이 잡히면 바로 넘어감) */
+ say('얼굴이 네모 안에 들어오고 테두리가 초록색이 되게 앉아 주세요. 머리는 되도록 움직이지 마세요.');cam(true);
+ for(let i=0,ok=0;i<60&&ok<10&&!G.skip;i++){ok=earNow()!==null?ok+1:0;await sl(100)}if(!G.skip)await sl(600);cam(false);
+ /* 2) 시선 보정: 이전 학습 데이터를 지우고 기록. 기본 5점(빠름), '정밀 보정'은 9점 */
+ if(!G.skip){try{await webgazer.clearData()}catch(e){}
+  /* WebGazer는 보정 데이터를 최근 50개만 기억해 앞쪽 점들을 잊어버림 → 모든 보정 점이 남도록 400개로 늘림 */
+  try{const W=webgazer.util.DataWindow;webgazer.getRegression().forEach(r=>['screenXClicksArray','screenYClicksArray','eyeFeaturesClicks','dataClicks'].forEach(k=>{if(r[k])r[k]=new W(400)}))}catch(e){console.warn(e)}}
+ const pts=full?[[.08,.1],[.5,.1],[.92,.1],[.08,.5],[.5,.5],[.92,.5],[.08,.9],[.5,.9],[.92,.9]]:[[.1,.12],[.9,.12],[.5,.5],[.1,.88],[.9,.88]],ears=[];
+ if(!G.skip){say('노란 점이 나타나면 점의 가운데를 바라보세요');await sl(full?1200:700)}
+ for(const [px,py] of pts){if(G.skip)break;say('');const d=h('i');d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);const x=px*innerWidth,y=py*innerHeight;
+  await sl(full?700:350);/* 눈이 점으로 옮겨 가는 시간 */d.classList.add('rec');const e=[];
+  for(let i=0;i<(full?15:12)&&!G.skip;i++){try{webgazer.recordScreenPosition(x,y,'click')}catch(er){}e.push(earNow());await sl(full?80:90)}d.remove();ears.push(med(e))}
  /* 3) 눈 감김 측정. 아래쪽을 볼 때 눈이 가장 작아지므로 '가장 작게 뜬 값'과 감은 값의 중간을 기준으로 */
- say('눈을 감고, 삐 소리가 나면 뜨세요');await sl(900);const k=await sample(1500);beep();await sl(600);
- const o=med(ears),lo=Math.min(...ears.filter(v=>v!==null));let msg='';
- if(o&&k!==null&&isFinite(lo)&&k<lo*.92){base=o;EYE.ratio=Math.min(.9,Math.max(.45,(k+(lo-k)*.5)/o))}
- else msg=' 눈 감김을 잘 측정하지 못했어요. 밝은 곳에서 다시 보정해 보세요.';
+ let msg='';
+ if(!G.skip){say('눈을 감고, 삐 소리가 나면 뜨세요');await sl(600);const k=await sample(900);beep();await sl(300);
+  const o=med(ears),lo=Math.min(...ears.filter(v=>v!==null));
+  if(o&&k!==null&&isFinite(lo)&&k<lo*.92){base=o;EYE.ratio=Math.min(.9,Math.max(.45,(k+(lo-k)*.5)/o))}
+  else msg=' 눈 감김을 잘 측정하지 못했어요. 밝은 곳에서 다시 보정해 보세요.'}
  /* 4) 정확도 확인 (학습하지 않고 예측만 비교) */
- const chk=[[.15,.15],[.85,.15],[.5,.5],[.15,.85],[.85,.85]];let err=0;
- for(const [px,py] of chk){say('');const d=h('i');d.className='chk';d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);await sl(1000);
-  let sx=0,sy=0,n=0;for(let i=0;i<12;i++){sx+=G.x;sy+=G.y;n++;await sl(70)}err+=Math.hypot(sx/n-px*innerWidth,sy/n-py*innerHeight);d.remove()}
- err/=chk.length;const pc=Math.round(err/Math.hypot(innerWidth,innerHeight)*100);
- c.style.display='none';cs=0;ring=[];G.cal=false;
+ const chk=full?[[.15,.15],[.85,.15],[.5,.5],[.15,.85],[.85,.85]]:[[.2,.2],[.8,.5],[.3,.8]];let err=0,n=0;
+ for(const [px,py] of chk){if(G.skip)break;say('');const d=h('i');d.className='chk';d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);await sl(800);
+  let sx=0,sy=0,m=0;for(let i=0;i<8&&!G.skip;i++){sx+=G.x;sy+=G.y;m++;await sl(70)}if(m){err+=Math.hypot(sx/m-px*innerWidth,sy/m-py*innerHeight);n++}d.remove()}
+ const skipped=G.skip;c.style.display='none';cam(false);cs=0;ring=[];G.cal=false;G.skip=false;GF.x=null;
  if(performance.now()-G.last>3000){st('시선 데이터가 들어오지 않아요. 카메라에 얼굴이 보이는지, 인터넷 연결이 되는지 확인한 뒤 🎯 보정을 다시 눌러 주세요. 그동안 마우스로 쓸 수 있어요.');return}
- st((pc<=12?'보정 완료! ':'보정 완료. 정확도가 낮아요 — 얼굴을 밝게 비추고, 화면과 50~70cm 떨어져 머리를 고정한 채 🎯 보정을 다시 해 보세요. ')+`평균 오차 약 ${Math.round(err)}px (${pc}%).`+msg)}
+ if(skipped&&!n){st('보정을 건너뛰었어요. 시선이 어긋나면 🎯 보정을 다시 눌러 주세요.');return}
+ err/=n||1;const pc=Math.round(err/Math.hypot(innerWidth,innerHeight)*100);
+ st((pc<=12?'보정 완료! ':'보정 완료. 정확도가 낮아요 — 얼굴을 밝게 비추고 머리를 고정한 채 "정밀 보정"을 해 보세요. ')+`평균 오차 약 ${Math.round(err)}px (${pc}%).`+msg)}
+$('cal').onclick=()=>{G.skip=true};
+document.addEventListener('keydown',e=>{if(e.key=='Escape'&&G.cal)G.skip=true});
+$('senB').onclick=()=>setSens((gsI+1)%3);
 $('dwB').onclick=()=>{G.dwell=!G.dwell;$('dwB').classList.toggle('on',G.dwell);$('dwB').textContent=G.dwell?'⏱ 응시 선택 켜짐':'⏱ 응시 선택 꺼짐'};
 /* ---------- 음성 ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec,mic=false;
@@ -400,5 +420,5 @@ function heard(t){$('heard').textContent='🎤 "'+t+'"';
  let fz=false;if(!best&&spw.length>=3){let fs=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){const s=sim(spw,k);if(s>fs){fs=s;best=id}}}if(fs<(spw.length<5?.8:.6))best=null;else fz=true}/* 짧은 말은 더 엄격하게 */
  if(!best&&em&&act&&D[act.b.id].slots[act.i][0]!='b'){snap();act.b.a[act.i]=mkExpr(em);act=null;draw();toast('수식 입력: '+em[0]);return}
  if(best){const n=t.match(/-?\d+(\.\d+)?/g);add(best,n,em&&mkExpr(em));toast((fz?'비슷한 블록으로 추가: ':'추가: ')+D[best].parts.map(p=>p[0]=='{'?'□':p).join('')+(em?' ['+em[0]+']':'')+(n?' ('+n.join(', ')+')':''))}else toast('비슷한 블록을 찾지 못했어요. 다시 말해 주세요')}
-tabs();pal();draw();paint();
+setSens(0);tabs();pal();draw();paint();
 </script></body></html>
