@@ -49,13 +49,13 @@ input.arm{outline:6px solid var(--hl);animation:bl 1s infinite}@keyframes bl{50%
 .gz{outline:5px solid #22c55e!important;outline-offset:2px}
 .blk.tgt{outline:5px dashed #22d3ee;outline-offset:3px}
 #cur{position:fixed;left:-20px;top:-20px;width:40px;height:40px;border-radius:50%;border:4px solid var(--hl);background:conic-gradient(rgba(239,68,68,.55) var(--p,0deg),transparent 0);pointer-events:none;z-index:99;transition:transform .05s linear}
-#cal{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:98;display:none;color:#fff;font-size:26px;text-align:center;padding-top:30vh}
+#cal{white-space:pre-line;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:98;display:none;color:#fff;font-size:26px;text-align:center;padding-top:30vh}
 #cal i{position:fixed;width:34px;height:34px;margin:-17px;border-radius:50%;background:#facc15;box-shadow:0 0 0 8px rgba(250,204,21,.4)}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:#111;color:#fff;padding:12px 20px;border-radius:30px;z-index:97;display:none;font-size:18px}
 @media(max-width:900px){main{grid-template-columns:1fr;overflow:auto}body{overflow:auto}#wrap{grid-template-columns:1fr;min-height:70vh}}
 </style></head><body>
 <header><h1>👁 눈으로 코딩</h1>
-<button id=eyeB>👁 시선 추적 시작</button><button id=calB>🎯 보정</button><button id=dwB>⏱ 응시 선택 꺼짐</button><button id=micB>🎤 음성 켜기</button><span id=st>마우스·스페이스바로도 사용할 수 있어요. 시선 추적을 시작하면 눈을 0.4초 이상 감아 선택합니다.</span></header>
+<button id=eyeB>👁 시선 추적 시작</button><button id=calB>🎯 보정</button><button id=dwB>⏱ 응시 선택 꺼짐</button><button id=senB>🐢 시선 속도: 안정</button><button id=micB>🎤 음성 켜기</button><span id=st>마우스·스페이스바로도 사용할 수 있어요. 시선 추적을 시작하면 눈을 0.4초 이상 감아 선택합니다.</span></header>
 <main>
 <section id=left>
 <div id=stage><div id=spr>🤖</div><div id=bub></div></div>
@@ -202,12 +202,16 @@ function parseStruct(t){t=t.trim().replace(/[.。?!]+$/,'');let m;
 function ctlKind(t){const u0=norm(t).replace(/[을를]/g,'');let u=u0;
  for(let i=0;i<3;i++)u=u.replace(/(시작|켜기|켜줘|켜|하기|해주세요|해줘|주세요|해|줘)$/,'');
  if(/^(시선추적|아이트래킹|아이트랙킹|시선추적기|시선트래킹)$/.test(u))return'eye';
+ if(/^(정밀|자세히|꼼꼼히|9점)보정$/.test(u))return'cal2';
  if(/^(다시|재|눈)?보정$/.test(u))return'cal';
+ if(u0.includes('감도')||u0.includes('시선속도')||(u0.includes('시선')&&/(느리|빠르|천천)/.test(u0)))return/(낮|느리|천천|안정|줄)/.test(u0)?'senlo':/(높|빠르|올|민감)/.test(u0)?'senhi':/보통/.test(u0)?'senmid':'sentog';
  if(u0.includes('응시선택')||/^응시(모드)?(켜|끄|꺼|시작|해제)/.test(u0))return/(끄|꺼|해제|중지|정지|비활성)/.test(u0)?'dwoff':/(켜|시작|활성)/.test(u0)?'dwon':'dwtog';
  return null}
 function runCtl(k){armed=null;
  if(k=='eye'){if(G.on)toast('시선 추적이 이미 켜져 있어요. "보정"이라고 말하면 다시 보정해요');else{toast('시선 추적을 시작합니다');$('eyeB').click()}}
  else if(k=='cal'){toast('보정을 시작합니다');$('calB').click()}
+ else if(k=='cal2'){if(G.on){toast('정밀 보정을 시작합니다');calib(true)}else toast('먼저 "시선 추적 시작"이라고 말해 주세요')}
+ else if(k.startsWith('sen')){setSens(k=='senlo'?gsI-1:k=='senhi'?gsI+1:k=='senmid'?1:(gsI+1)%3);toast('시선 속도: '+GS_LV[gsI][0])}
  else{const v=k=='dwon'?true:k=='dwoff'?false:!G.dwell;if(G.dwell!==v)$('dwB').click();toast('응시 선택 '+(G.dwell?'켜짐':'꺼짐'))}}
 function runCmd(k){({undo,redo,dup:()=>dupBlock(pickBlk()),del:()=>delBlock(pickBlk())})[k]()}
 $('undoB').onclick=undo;$('redoB').onclick=redo;
@@ -265,9 +269,21 @@ stg.addEventListener('mousedown',e=>{S.md=true;if(e.target.id=='spr'){S.od=true;
 stg.addEventListener('mouseup',e=>{const was=S.od;S.md=false;S.od=false;launch('mup');if(was)launch('oup')});
 const OB=['🤖','🐱','🐶','🚀'];OB.forEach((o,i)=>{const b=h('button',i?'':'on');b.textContent=o;b.onclick=()=>{$('spr').textContent=o;[...$('objs').children].forEach(c=>c.classList.remove('on'));b.classList.add('on')};$('objs').append(b)});
 /* ---------- 시선 / 깜박임 ---------- */
-const G={on:false,last:0,x:innerWidth/2,y:innerHeight/2,dwell:false};/* last: 마지막으로 시선 데이터를 받은 시각 */
+const G={on:false,last:0,hold:0,skip:false,x:innerWidth/2,y:innerHeight/2,dwell:false};/* last: 마지막으로 시선 데이터를 받은 시각 */
 const noGaze=()=>!G.on||performance.now()-G.last>1500;/* 시선 데이터가 안 들어오면 마우스로 대신 움직임 */let hov=null,dwT=0,cool=0;
 const cur=$('cur');
+/* 시선 안정화: One-Euro 필터(가만히 볼 땐 강하게 부드럽게, 빨리 움직일 땐 빠르게 따라감) + 데드존(작은 흔들림 무시) */
+const GS_LV=[['안정',20,55,160,5],['보통',12,35,130,4],['빠름',6,18,100,3]];let gsI=0;const GS={win:20,dz:55,jump:160,sac:5},GF={x:null},GW=[];
+function setSens(i){gsI=Math.max(0,Math.min(2,i));const v=GS_LV[gsI];GS.win=v[1];GS.dz=v[2];GS.jump=v[3];GS.sac=v[4];$('senB').textContent='🐢 시선 속도: '+v[0]}
+const medn=a=>{const b=[...a].sort((x,y)=>x-y),n=b.length;return n%2?b[n>>1]:(b[n/2-1]+b[n/2])/2};
+/* 시선 안정화: 최근 샘플의 '중앙값'만 따라가서 튀는 값(이상치)을 버리고, 작은 움직임은 데드존으로 무시.
+   멀리 떨어진 샘플이 연속으로 들어올 때만(=진짜로 눈을 옮김) 새 위치로 빠르게 이동합니다. */
+function gazeIn(x,y){
+ if(GF.x===null){GW.length=0;GF.x=1;GW.push([x,y]);gz(x,y,1);return}
+ GW.push([x,y]);if(GW.length>GS.win)GW.shift();
+ if(GW.length>=GS.sac&&GW.slice(-GS.sac).every(q=>Math.hypot(q[0]-G.x,q[1]-G.y)>GS.jump))GW.splice(0,GW.length-GS.sac);
+ const mx=medn(GW.map(q=>q[0])),my=medn(GW.map(q=>q[1])),d=Math.hypot(mx-G.x,my-G.y);
+ if(d<GS.dz)return;gz(mx,my,.35)}
 function gz(x,y,k){G.x+=(x-G.x)*k;G.y+=(y-G.y)*k;cur.style.transform=`translate(${G.x}px,${G.y}px)`;
  const el=document.elementFromPoint(G.x,G.y);let t=el&&el.closest('button,input,.slot,.zone,#stage');
  {const bk=el&&!el.closest('.zone')&&el.closest('.blk');if(bk!==gz.bk){gz.bk&&gz.bk.classList.remove('tgt');gz.bk=bk;bk&&bk.classList.add('tgt')}}
@@ -293,7 +309,7 @@ function blinkTick(){if(!G.on||!window.webgazer||G.cal)return;const ear=earNow()
  if(closed&&!cs){cs=now;cpos=ring[0]||[G.x,G.y]}/* 감기 시작 직전(약 0.4초 전) 시선 위치 */
  if(cs)m.style.width=Math.min(100,(now-cs)/4)+'%';
  if(closed&&cs&&now-cs>400)m.style.background='#22c55e';
- if(!closed&&cs){const t=now-cs;cs=0;m.style.width=0;m.style.background='';ring=[];if(t>=400&&t<2000)fire(cpos[0],cpos[1])}}
+ if(!closed&&cs){const t=now-cs;cs=0;G.hold=now+300;m.style.width=0;m.style.background='';ring=[];if(t>=400&&t<2000)fire(cpos[0],cpos[1])}}
 setInterval(blinkTick,40);
 const WG='https://cdn.jsdelivr.net/npm/webgazer@3.5.3/dist';
 function loadJs(u){return new Promise((ok,no)=>{const s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=no;document.head.append(s)})}
@@ -302,9 +318,11 @@ $('eyeB').onclick=async()=>{if(G.on){calib();return}const L=location;if(L.protoc
   st(L.protocol=='file:'?'파일을 바로 연 상태(file://)에서는 카메라를 쓸 수 없어요. https 주소(예: GitHub Pages)나 로컬 서버(localhost)로 열어 주세요. 지금은 마우스 모드로 동작합니다.':'카메라는 https 주소나 localhost에서만 켤 수 있어요. 지금은 마우스 모드로 동작합니다.');toast('시선 추적은 https 주소에서만 켤 수 있어요');return}st('시선 추적을 불러오는 중… 카메라 권한을 허용해 주세요');
  try{if(!window.webgazer)await loadJs(WG+'/webgazer.min.js');
   webgazer.params.faceMeshSolutionPath=WG+'/mediapipe/face_mesh';/* 기본값은 페이지 기준 상대 경로라 얼굴 모델을 못 찾음 */
-  const bp=webgazer.setRegression('ridge').setGazeListener(d=>{if(d){G.last=performance.now();if(!cs)gz(d.x,d.y,.3)}}).begin();
+  try{webgazer.saveDataAcrossSessions(false)}catch(e){}/* 이전 자세의 저장 데이터가 섞여 어긋나는 것을 막음 */
+  const bp=webgazer.setRegression('ridge').setGazeListener(d=>{if(d){G.last=performance.now();if(!cs&&performance.now()>G.hold)gazeIn(d.x,d.y)}}).begin();
+  const noMouse=()=>{try{webgazer.removeMouseEventListeners()}catch(e){}};noMouse();/* 마우스·클릭을 학습 데이터로 쓰지 않게: 우리 커서와 시선 선택(클릭)이 곧 예측값이라 되먹임으로 점점 틀어짐 */
   G.on=true;$('eyeB').classList.add('on');$('eyeB').textContent='👁 시선 추적 켜짐';/* 시작이 늦어져도 🎯 보정이 동작하도록 먼저 켬 */
-  await Promise.race([bp,sl(20000).then(()=>{throw new Error('timeout')})]);webgazer.showPredictionPoints(false);calib()}
+  await Promise.race([bp,sl(20000).then(()=>{throw new Error('timeout')})]);noMouse();try{webgazer.clearData()}catch(e){}webgazer.showPredictionPoints(false);calib()}
  catch(e){console.error(e);const n=e&&e.name;if(!(e&&e.message=='timeout')){G.on=false;$('eyeB').classList.remove('on');$('eyeB').textContent='👁 시선 추적 시작'}
   if(e&&e.message=='timeout'){st('얼굴 인식 모델을 불러오지 못하고 있어요. 인터넷 연결을 확인한 뒤 🎯 보정을 눌러 보세요. 그동안 마우스로 쓸 수 있어요.');return}
   st(n=='NotAllowedError'?'카메라 권한이 거부되어 마우스 모드로 동작합니다. 주소창의 카메라 권한을 허용해 주세요.':n=='NotFoundError'?'카메라를 찾지 못해 마우스 모드로 동작합니다.':'시선 추적을 불러오지 못해 마우스 모드로 동작합니다. 인터넷 연결을 확인해 주세요.')}};
@@ -312,17 +330,23 @@ $('calB').onclick=()=>G.on?calib():$('eyeB').click();
 const med=a=>{a=a.filter(v=>v!==null).sort((x,y)=>x-y);return a.length?a[a.length>>1]:null};
 async function sample(ms){const a=[];for(const e=performance.now()+ms;performance.now()<e;){a.push(earNow());await sl(40)}return med(a)}
 function beep(){try{const A=beep.a||(beep.a=new AudioContext()),o=A.createOscillator(),g=A.createGain();o.frequency.value=880;g.gain.value=.2;o.connect(g).connect(A.destination);o.start();o.stop(A.currentTime+.25)}catch(e){}}
-async function calib(){const c=$('cal');c.style.display='block';G.cal=true;c.textContent='화면의 노란 점을 차례로 바라보세요';c.querySelectorAll('i').forEach(i=>i.remove());
- const pts=[[.08,.1],[.5,.1],[.92,.1],[.08,.5],[.5,.5],[.92,.5],[.08,.9],[.5,.9],[.92,.9]];
- for(const [px,py] of pts){const d=h('i');d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);const x=px*innerWidth,y=py*innerHeight;
-  for(let i=0;i<22;i++){try{webgazer.recordScreenPosition(x,y,'click')}catch(e){}await sl(90)}d.remove()}
- c.textContent='눈을 편하게 뜨고 화면을 보세요';await sl(600);const o=await sample(1500);
- c.textContent='눈을 감고, 삐 소리가 나면 뜨세요';await sl(900);const k=await sample(1500);beep();await sl(500);
- let msg='보정 완료! 보정이 어긋나면 🎯 보정을 다시 눌러 주세요.';
- if(o&&k!==null&&k<o*.92){EYE.ratio=Math.min(.88,Math.max(.5,(k+(o-k)*.45)/o));base=o}
- else msg='시선 보정은 끝났지만 눈 감김을 잘 측정하지 못했어요. 밝은 곳에서 🎯 보정을 다시 해 보세요.';
- c.style.display='none';cs=0;ring=[];G.cal=false;
+async function calib(full){const c=$('cal'),H='\n(건너뛰려면 화면을 누르거나 Esc)';c.style.display='block';G.cal=true;G.skip=false;GF.x=null;
+ const pts=full?[[.08,.1],[.5,.1],[.92,.1],[.08,.5],[.5,.5],[.92,.5],[.08,.9],[.5,.9],[.92,.9]]:[[.1,.12],[.9,.12],[.5,.5],[.1,.88],[.9,.88]];/* 기본 5점(약 7초), '정밀 보정'은 9점 */
+ c.textContent='화면의 노란 점을 차례로 바라보세요'+H;
+ for(const [px,py] of pts){if(G.skip)break;const d=h('i');d.style.left=px*100+'%';d.style.top=py*100+'%';c.append(d);const x=px*innerWidth,y=py*innerHeight;
+  await sl(350);/* 눈이 점으로 옮겨 가는 시간 */
+  for(let i=0;i<12&&!G.skip;i++){try{webgazer.recordScreenPosition(x,y,'click')}catch(e){}await sl(90)}d.remove()}
+ let msg='보정 완료! 어긋나면 🎯 보정을 다시 눌러 주세요.';
+ if(!G.skip){c.textContent='눈을 편하게 뜨고 화면을 보세요'+H;await sl(300);const o=await sample(800);
+  if(!G.skip){c.textContent='눈을 감고, 삐 소리가 나면 뜨세요'+H;await sl(600);const k=await sample(900);beep();await sl(300);
+   if(o&&k!==null&&k<o*.92){EYE.ratio=Math.min(.88,Math.max(.5,(k+(o-k)*.45)/o));base=o}
+   else msg='시선 보정은 끝났지만 눈 감김을 잘 측정하지 못했어요. 밝은 곳에서 🎯 보정을 다시 해 보세요.'}}
+ if(G.skip)msg='보정을 건너뛰었어요. 시선이 어긋나면 🎯 보정을 다시 눌러 주세요.';
+ c.style.display='none';cs=0;ring=[];G.cal=false;G.skip=false;GF.x=null;
  if(performance.now()-G.last>3000)msg='시선 데이터가 들어오지 않아요. 카메라에 얼굴이 보이는지, 얼굴 인식 모델이 불러와졌는지 확인해 주세요. 그동안 마우스로 쓸 수 있어요.';st(msg)}
+$('cal').onclick=()=>{G.skip=true};
+document.addEventListener('keydown',e=>{if(e.key=='Escape'&&G.cal)G.skip=true});
+$('senB').onclick=()=>setSens((gsI+1)%3);
 $('dwB').onclick=()=>{G.dwell=!G.dwell;$('dwB').classList.toggle('on',G.dwell);$('dwB').textContent=G.dwell?'⏱ 응시 선택 켜짐':'⏱ 응시 선택 꺼짐'};
 /* ---------- 음성 ---------- */
 const SR=window.SpeechRecognition||window.webkitSpeechRecognition;let rec,mic=false;
@@ -368,5 +392,5 @@ function heard(t){$('heard').textContent='🎤 "'+t+'"';
  let fz=false;if(!best&&spw.length>=3){let fs=0;for(const id in D){const ks=[D[id].key,AL[id]&&norm(AL[id])].filter(Boolean);for(const k of ks){const s=sim(spw,k);if(s>fs){fs=s;best=id}}}if(fs<(spw.length<5?.8:.6))best=null;else fz=true}/* 짧은 말은 더 엄격하게 */
  if(!best&&em&&act&&D[act.b.id].slots[act.i][0]!='b'){snap();act.b.a[act.i]=mkExpr(em);act=null;draw();toast('수식 입력: '+em[0]);return}
  if(best){const n=t.match(/-?\d+(\.\d+)?/g);add(best,n,em&&mkExpr(em));toast((fz?'비슷한 블록으로 추가: ':'추가: ')+D[best].parts.map(p=>p[0]=='{'?'□':p).join('')+(em?' ['+em[0]+']':'')+(n?' ('+n.join(', ')+')':''))}else toast('비슷한 블록을 찾지 못했어요. 다시 말해 주세요')}
-tabs();pal();draw();paint();
+setSens(0);tabs();pal();draw();paint();
 </script></body></html>
